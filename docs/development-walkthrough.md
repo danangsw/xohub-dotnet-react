@@ -2329,7 +2329,7 @@ curl http://localhost:5000/health
 curl http://localhost:3000
 ```
 
-## 🔧 Error Handling Best Practices
+## 🔧 Phase 7: Error Handling Best Practices
 
 ### Global Exception Handling
 ```csharp
