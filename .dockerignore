@@ -1,0 +1,9 @@
+## 🐳 .dockerignore
+
+```dockerignore
+**/node_modules
+**/bin
+**/obj
+**/.env
+**/.DS_Store
+**/dist
