@@ -51,6 +51,7 @@ docker-compose up --build
 ```
 
 Frontend: http://localhost:3000/tictactoeplay
+
 Backend: http://localhost:5000/tictactoehub
 
 ## 🎓 Educational Purpose
