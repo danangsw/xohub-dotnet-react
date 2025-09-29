@@ -1,3 +1,5 @@
+namespace XoHub.Server.Services;
+
 public interface IAIEngine
 {
     (int row, int col) GetBestMove(char[,] board, char aiMark);

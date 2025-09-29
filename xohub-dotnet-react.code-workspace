@@ -72,13 +72,16 @@
 		"cSpell.words": [
 			"appsettings",
 			"Bahasa",
+			"buildtransitive",
 			"Consolas",
+			"contentfiles",
 			"dockercompose",
 			"Dockerized",
 			"donot",
 			"omnisharp",
 			"vs-seti",
-			"xohub"
+			"xohub",
+			"xunit"
 		]
 	}
 }

@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using System.Text;
+using XoHub.Server.Services;
+
+namespace XoHub.Server.Models;
 
 /// <summary>
 /// Represents a game room for managing players and game state

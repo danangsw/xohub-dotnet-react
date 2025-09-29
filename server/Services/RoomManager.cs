@@ -1,4 +1,7 @@
 using System.Collections.Concurrent;
+using XoHub.Server.Models;
+
+namespace XoHub.Server.Services;
 
 public enum GameResult
 {
