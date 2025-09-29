@@ -2,32 +2,7 @@
 
 This guide walks you through building the real-time TicTacToe game from scratch to local Docker deployment, following industry best practices.
 
-## 🚀 Phase 1: Environment Setup
-
-### Prerequisites
-```bash
-# Check versions
-dotnet --version  # Should be 8.0+
-node --version    # Should be 20+
-docker --version  # Should be 24+
-```
-
-### Project Structure Creation
-```bash
-# Create project root
-mkdir xohub-dotnet-react
-cd xohub-dotnet-react
-
-# Backend structure
-mkdir -p server/{Controllers,Hubs,Services,Models,Data}
-mkdir -p server/Properties
-
-# Frontend structure  
-mkdir -p client/{src/{components,services,hooks,utils,pages},public}
-
-# Documentation
-mkdir -p docs examples
-```
+## [🚀 Phase 1: Environment Setup](development-phase-1.md)
 
 ## 🏗️ Phase 2: Backend Development (ASP.NET Core + SignalR)
 
