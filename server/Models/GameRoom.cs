@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Text;
+
 /// <summary>
 /// Represents a game room for managing players and game state
 /// 
@@ -5,7 +8,7 @@
 /// 1. Immutable room ID for consistent identification
 /// 2. Fixed-size player list ensure O(1) access and prevent overflows
 /// 3. Char array board for memory efficiency and fast access
-/// 4. UTC timestamps for consistency accross time zones
+/// 4. UTC timestamps for consistency across time zones
 /// 5. Comprehensive game status and metadata for analytics and monitoring
 /// 6. Support for AI players with distinct handling
 ///
@@ -18,7 +21,7 @@
 public class GameRoom
 {
     public string RoomId { get; set; } = string.Empty;
-    public Player[] Players { get; set; } = new Player[2]; // Max 2 players per room
+    public Player?[] Players { get; set; } = new Player[2]; // Max 2 players per room
     public char[,] Board { get; set; } = new char[3, 3]; // 3x3 Tic-Tac-Toe board
     public string CurrentTurn { get; set; } = "X";
     public GameStatus Status { get; set; } = GameStatus.WaitingForPlayers;
@@ -173,7 +176,7 @@ public class Player
     /// Indicates if the player is an AI
     /// </summary>
     public bool IsAI =>
-        (string.IsNullOrEmpty(ConnectionId) && UserId == string.IsNullOrEmpty(UserId)) || (ConnectionId == "AI");
+        (string.IsNullOrEmpty(ConnectionId) && string.IsNullOrEmpty(UserId)) || (ConnectionId == "AI");
 
     /// <summary>
     /// Average time taken per move for analytics
