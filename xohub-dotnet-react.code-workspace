@@ -68,6 +68,17 @@
 		"csharp.inlayHints.enableInlayHintsForImplicitVariableTypes": true,
 		"csharp.inlayHints.enableInlayHintsForLambdaParameterTypes": true,
 		"csharp.inlayHints.enableInlayHintsForImplicitObjectCreation": true,
-		"dotnet.formatting.organizeImportsOnFormat": true
+		"dotnet.formatting.organizeImportsOnFormat": true,
+		"cSpell.words": [
+			"appsettings",
+			"Bahasa",
+			"Consolas",
+			"dockercompose",
+			"Dockerized",
+			"donot",
+			"omnisharp",
+			"vs-seti",
+			"xohub"
+		]
 	}
 }
