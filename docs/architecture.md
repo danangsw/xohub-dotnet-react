@@ -157,6 +157,17 @@ JWT Auth, JWKS Validation        RoomManager, AIEngine, KeyManager
 - **HTTPS**:
     - Enabled via dev certs
 
+## Industry Best Practices Included:
+- **Singleton pattern** for room management
+- **Background services** for cleanup tasks
+- **JWT with key rotation** for security
+- **Structured logging** without sensitive data
+- **Docker multi-stage builds** for optimization
+- **Health checks** and monitoring
+- **Backup strategies** for data persistence
+- **Global exception** handling middleware
+- **Auto-reconnection** for SignalR clients
+
 ## References
 - [SignalR Docs](https://learn.microsoft.com/en-us/aspnet/core/signalr/introduction)
 - [JWT & JWKS](https://auth0.com/docs/secure/tokens/json-web-tokens/json-web-key-sets)
