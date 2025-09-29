@@ -198,4 +198,103 @@ public class GameRoomTests
             duration.Should().Be(TimeSpan.Zero);
         }
     }
+
+    [Fact]
+    public void GetOpponentPlayer_ShouldReturnOpponent_WhenTwoPlayersExist()
+    {
+        // Arrange
+        var room = new GameRoom();
+        var player1 = new Player { ConnectionId = "conn1", Name = "Alice", Mark = 'X' };
+        var player2 = new Player { ConnectionId = "conn2", Name = "Bob", Mark = 'O' };
+        room.Players[0] = player1;
+        room.Players[1] = player2;
+
+        // Act
+        var opponent1 = room.GetOpponentPlayer("conn1");
+        var opponent2 = room.GetOpponentPlayer("conn2");
+
+        // Assert
+        opponent1.Should().Be(player2);
+        opponent2.Should().Be(player1);
+    }
+
+    [Fact]
+    public void GetOpponentPlayer_ShouldReturnNull_WhenOnlyOnePlayerExists()
+    {
+        // Arrange
+        var room = new GameRoom();
+        var player1 = new Player { ConnectionId = "conn1", Name = "Alice", Mark = 'X' };
+        room.Players[0] = player1;
+        // room.Players[1] remains null
+
+        // Act
+        var opponent = room.GetOpponentPlayer("conn1");
+
+        // Assert
+        opponent.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetOpponentPlayer_ShouldReturnNull_WhenNoPlayersExist()
+    {
+        // Arrange
+        var room = new GameRoom();
+        // Both players remain null
+
+        // Act
+        var opponent = room.GetOpponentPlayer("any-connection-id");
+
+        // Assert
+        opponent.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetOpponentPlayer_ShouldReturnNonNullPlayer_WhenOnePlayerIsNull()
+    {
+        // Arrange
+        var room = new GameRoom();
+        var player2 = new Player { ConnectionId = "conn2", Name = "Bob", Mark = 'O' };
+        room.Players[0] = null;
+        room.Players[1] = player2;
+
+        // Act
+        var opponent = room.GetOpponentPlayer("conn2");
+
+        // Assert
+        opponent.Should().BeNull(); // No opponent exists (only one non-null player)
+    }
+
+    [Fact]
+    public void GetOpponentPlayer_ShouldReturnNull_WhenBothPlayersHaveSameConnectionId()
+    {
+        // Arrange
+        var room = new GameRoom();
+        var player1 = new Player { ConnectionId = "same-conn", Name = "Alice", Mark = 'X' };
+        var player2 = new Player { ConnectionId = "same-conn", Name = "Bob", Mark = 'O' };
+        room.Players[0] = player1;
+        room.Players[1] = player2;
+
+        // Act
+        var opponent = room.GetOpponentPlayer("same-conn");
+
+        // Assert
+        opponent.Should().BeNull(); // No player has a different connection ID
+    }
+
+    [Fact]
+    public void GetOpponentPlayer_ShouldReturnFirstAvailablePlayer_WhenSearchingForNonExistentConnectionId()
+    {
+        // Arrange
+        var room = new GameRoom();
+        var player1 = new Player { ConnectionId = "conn1", Name = "Alice", Mark = 'X' };
+        var player2 = new Player { ConnectionId = "conn2", Name = "Bob", Mark = 'O' };
+        room.Players[0] = player1;
+        room.Players[1] = player2;
+
+        // Act
+        var opponent = room.GetOpponentPlayer("non-existent-conn");
+
+        // Assert
+        opponent.Should().Be(player1); // Returns first player since neither matches the search ID
+    }
 }
