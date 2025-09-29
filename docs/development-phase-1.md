@@ -1,6 +1,7 @@
 # Phase 1: Environment Setup
 
-### Prerequisites
+## Prerequisites
+
 ```bash
 # Check versions
 dotnet --version  # Should be 8.0+
@@ -8,7 +9,8 @@ node --version    # Should be 20+
 docker --version  # Should be 24+
 ```
 
-### Project Structure Creation
+## Project Structure Creation
+
 ```bash
 # Create project root
 mkdir xohub-dotnet-react

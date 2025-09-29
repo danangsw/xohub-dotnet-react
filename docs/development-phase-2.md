@@ -1,6 +1,7 @@
 # Phase 2: Backend Development (ASP.NET Core + SignalR)
 
-### 2.1 Initialize ASP.NET Core Project
+## 2.1 Initialize ASP.NET Core Project
+
 ```bash
 cd server
 dotnet new web -n TicTacToe.Server
@@ -13,9 +14,10 @@ dotnet add package System.IdentityModel.Tokens.Jwt
 dotnet add package Microsoft.Extensions.Hosting
 ```
 
-### 2.2 Core Models (server/Models/)
+## 2.2 Core Models (server/Models/)
 
-**GameRoom.cs**
+### GameRoom.cs
+
 ```csharp
 /// <summary>
 /// Represents a game room with comprehensive state management
@@ -249,9 +251,10 @@ public class GameMove
 }
 ```
 
-### 2.3 Singleton Services
+## 2.3 Singleton Services
 
-**RoomManager.cs (server/Services/)**
+### RoomManager.cs (server/Services/)
+
 ```csharp
 public interface IRoomManager
 {
@@ -779,7 +782,8 @@ public enum GameResult
 }
 ```
 
-**KeyManager.cs (server/Services/)**
+### KeyManager.cs (server/Services/)
+
 ```csharp
 public interface IKeyManager
 {
@@ -1325,7 +1329,8 @@ public class KeyMetadata
 }
 ```
 
-**AIEngine.cs (server/Services/)**
+### AIEngine.cs (server/Services/)
+
 ```csharp
 public interface IAIEngine
 {
@@ -1741,9 +1746,10 @@ public class AIEngine : IAIEngine
 }
 ```
 
-### 2.4 Background Services
+## 2.4 Background Services
 
-**RoomPruner.cs (server/Services/)**
+### RoomPruner.cs (server/Services/)
+
 ```csharp
 public class RoomPruner : BackgroundService
 {
@@ -1773,9 +1779,10 @@ public class RoomPruner : BackgroundService
 }
 ```
 
-### 2.5 SignalR Hub
+## 2.5 SignalR Hub
 
-**TicTacToeHub.cs (server/Hubs/)**
+### TicTacToeHub.cs (server/Hubs/)
+
 ```csharp
 [Authorize]
 public class TicTacToeHub : Hub
@@ -1824,9 +1831,10 @@ public class TicTacToeHub : Hub
 }
 ```
 
-### 2.6 Controllers & Authentication
+## 2.6 Controllers & Authentication
 
-**AuthController.cs (server/Controllers/)**
+### AuthController.cs (server/Controllers/)
+
 ```csharp
 [ApiController]
 [Route("api/[controller]")]
@@ -1857,6 +1865,7 @@ public class AuthController : ControllerBase
 ```
 
 ### 2.7 Program.cs Configuration
+
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 

@@ -5,35 +5,41 @@ This guide walks you through building the real-time TicTacToe game from scratch 
 ## Key Featured Addressed
 
 ### Development Workflow
+
 - Specific build/test commands beyond Docker Compose
 - Industry-standard development commands (`dotnet watch run`, `npm run dev`)
 - Separate commands for testing, building, and deployment
 - Health checks and monitoring commands
 
 ### Database Strategy
+
 - Initial phase backup strategies for Redis and JWT keys
 - Automated backup scripts for production readiness
 - Volume persistence for Docker containers
 - Manual and automated backup procedures
 
 ### Error Handling
+
 - Global exception middleware (industry standard)
 - Structured logging with context (no sensitive data)
 - Proper error boundaries in React components
 - SignalR error handling patterns
 
 ### AI Implementation
+
 - Minimax algorithm with alpha-beta pruning
 - Difficulty levels for future enhancement
 - Clean separation between AI engine and game logic
 - Proper integration with SignalR for real-time AI moves
 
 ### API Endpoints
+
 - Focus on JWKS endpoint as specified
 - JWT authentication flow
 - Proper REST API patterns for auth
 
- ## Development Phases:
+## Development Phases
+
 1. **Environment Setup** - Prerequisites and project structure
 2. **Backend Development** - Complete ASP.NET Core implementation
 3. **Frontend Development** - React + TypeScript with SignalR
@@ -48,6 +54,7 @@ This guide walks you through building the real-time TicTacToe game from scratch 
 ## 🎨 Phase 3: Frontend Development (React + TypeScript + Vite)
 
 ### 3.1 Initialize React Project
+
 ```bash
 cd client
 npm create vite@latest . -- --template react-ts
@@ -57,7 +64,8 @@ npm install @types/node
 
 ### 3.2 SignalR Client Service
 
-**services/SignalRClient.ts**
+#### services/SignalRClient.ts
+
 ```typescript
 import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
@@ -104,7 +112,8 @@ export class SignalRClient {
 
 ### 3.3 Authentication Hook
 
-**hooks/useAuth.ts**
+#### hooks/useAuth.ts
+
 ```typescript
 import { useState, useEffect } from 'react';
 
@@ -147,7 +156,8 @@ export const useAuth = () => {
 
 ### 3.4 Game Board Component
 
-**components/RoomUI.tsx**
+#### components/RoomUI.tsx
+
 ```typescript
 import React, { useState, useEffect } from 'react';
 import { SignalRClient } from '../services/SignalRClient';
@@ -209,7 +219,8 @@ export const RoomUI: React.FC<RoomUIProps> = ({ roomId, playerName, token, isAIM
 
 ### 3.5 Localization Support
 
-**utils/Localization.ts**
+#### utils/Localization.ts
+
 ```typescript
 import React, { createContext, useContext, useState } from 'react';
 
@@ -246,6 +257,7 @@ export const useLocalization = () => useContext(LocalizationContext);
 ## 🐳 Phase 4: Dockerization
 
 ### 4.1 Backend Dockerfile
+
 ```dockerfile
 # server/Dockerfile
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
@@ -269,6 +281,7 @@ ENTRYPOINT ["dotnet", "TicTacToe.Server.dll"]
 ```
 
 ### 4.2 Frontend Dockerfile
+
 ```dockerfile
 # client/Dockerfile
 FROM node:20-alpine AS build
@@ -285,6 +298,7 @@ EXPOSE 3000
 ```
 
 ### 4.3 Docker Compose
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -324,6 +338,7 @@ volumes:
 ## 🧪 Phase 5: Testing & Quality Assurance
 
 ### 5.1 Backend Unit Tests
+
 ```bash
 cd server
 dotnet add package Microsoft.AspNetCore.Mvc.Testing
@@ -334,7 +349,8 @@ dotnet add package Moq
 mkdir Tests/{Unit,Integration}
 ```
 
-**Example: RoomManager Tests**
+#### Example: RoomManager Tests
+
 ```csharp
 public class RoomManagerTests
 {
@@ -356,6 +372,7 @@ public class RoomManagerTests
 ```
 
 ### 5.2 Frontend Testing
+
 ```bash
 cd client
 npm install --save-dev @testing-library/react @testing-library/jest-dom
@@ -363,6 +380,7 @@ npm install --save-dev vitest jsdom
 ```
 
 ### 5.3 Development Commands
+
 ```bash
 # Backend development
 cd server
@@ -388,6 +406,7 @@ docker-compose logs -f backend # View backend logs
 ## 🚀 Phase 6: Deployment
 
 ### 6.1 Local Docker Deployment
+
 ```bash
 # Build and start all services
 docker-compose up --build -d
@@ -405,7 +424,8 @@ docker-compose logs frontend
 
 ### 6.2 Backup Strategies (Initial Phase)
 
-**Database Backup (Redis)**
+#### Database Backup (Redis)
+
 ```bash
 # Manual backup
 docker exec redis redis-cli BGSAVE
@@ -418,7 +438,8 @@ docker exec redis redis-cli BGSAVE
 docker cp redis:/data/dump.rdb ./backup/redis_backup_$DATE.rdb
 ```
 
-**JWT Keys Backup**
+#### JWT Keys Backup
+
 ```bash
 # Keys are persisted in Docker volume
 docker volume inspect xohub-dotnet-react_jwt_keys
@@ -428,6 +449,7 @@ docker run --rm -v xohub-dotnet-react_jwt_keys:/data -v $(pwd)/backup:/backup al
 ```
 
 ### 6.3 Monitoring & Logs
+
 ```bash
 # Application logs
 docker-compose logs -f --tail=100
@@ -443,6 +465,7 @@ curl http://localhost:3000
 ## 🔧 Phase 7: Error Handling Best Practices
 
 ### Global Exception Handling
+
 ```csharp
 /// <summary>
 /// Global exception handling middleware with comprehensive error categorization
@@ -721,6 +744,7 @@ public class PerformanceMonitoringMiddleware
 ```
 
 ### Structured Logging
+
 ```csharp
 // Use structured logging with context
 _logger.LogInformation("Player {PlayerId} joined room {RoomId} at {Timestamp}", 

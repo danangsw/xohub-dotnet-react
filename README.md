@@ -1,7 +1,9 @@
 # xohub-dotnet-react
+
 Real-time TicTacToe game server built with full-stack ASP.NET Core SignalR and React. Supports JWT authentication with hourly key rotation, room-scoped WebSocket broadcasting, and automatic pruning of inactive sessions.  Supports multiplayer rooms and includes AI opponent. Dockerized fullstack deployment.  
 
 ## Features
+
 - 🧠 Room-scoped WebSocket broadcasting via SignalR
 - 🔐 JWT authentication with hourly key rotation
 - 🧹 Automatic pruning of stale rooms and keys
@@ -12,6 +14,7 @@ Real-time TicTacToe game server built with full-stack ASP.NET Core SignalR and R
 ## Getting Started
 
 ## Folder Structure
+
 ```bash
 xohub-dotnet-react/
 ├── server/                  # ASP.NET Core backend
@@ -41,18 +44,20 @@ xohub-dotnet-react/
 ```
 
 ### Prerequisites
+
 - .NET 8 SDK
 - Node.js 20+
 - Docker
 
 ### Run Locally
+
 ```bash
 docker-compose up --build
 ```
 
-Frontend: http://localhost:3000/tictactoeplay
+Frontend: <http://localhost:3000/tictactoeplay>
 
-Backend: http://localhost:5000/tictactoehub
+Backend: <http://localhost:5000/tictactoehub>
 
 ## 🎓 Educational Purpose
 
@@ -66,4 +71,3 @@ This project is open-sourced to help developers learn:
 - Clean separation of concerns in .NET and React
 
 Feel free to fork, study, and remix for learning or teaching purposes. Contributions welcome!
-
