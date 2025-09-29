@@ -2,7 +2,7 @@
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "server", "server", "{DAD03CFC-D5FA-AC94-41C7-9ABAB326F09E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Server", "Server", "{DAD03CFC-D5FA-AC94-41C7-9ABAB326F09E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TicTacToe.Server", "server\TicTacToe.Server.csproj", "{77335855-762F-D883-BEA1-12692C9D8198}"
 EndProject
@@ -29,6 +29,7 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{77335855-762F-D883-BEA1-12692C9D8198} = {DAD03CFC-D5FA-AC94-41C7-9ABAB326F09E}
 		{C2742F1E-0A78-4BBD-99ED-D293241CB01A} = {2C765B66-3121-41C2-BABD-F7369773BA86}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
