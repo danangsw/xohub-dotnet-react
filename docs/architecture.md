@@ -191,6 +191,17 @@ dotnet test --filter "RoomManagerTests"
 
 # Run in watch mode (TDD development)
 dotnet watch test
+
+# Run Quick Coverage Check
+dotnet test --collect:"XPlat Code Coverage"
+
+# Run Full Coverage with HTML Report
+# Run tests and collect coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# Generate HTML report
+reportgenerator -reports:"TestResults/*/coverage.cobertura.xml" -targetdir:"TestResults/CoverageReport" -reporttypes:Html
+
 ```
 
 ### CI/CD Integration
