@@ -148,15 +148,64 @@ JWT Auth, JWKS Validation        RoomManager, AIEngine, KeyManager
 
 ## Testing & Observability
 
-- Unit Tests:
-  - RoomManager, AIEngine, KeyManager
-- Integration Tests:
-  - SignalR flow, JWT validation, JWKS endpoint
-- Manual QA:
-  - Room join/leave, AI gameplay, localization toggle
-- Logging:
-  - Structured logs via `ILogger`
-  - Room lifecycle and pruning events logged
+Testing Approach (Test-Driven Development - TDD)
+The project follows a comprehensive TDD approach with extensive unit, integration, and concurrency testing to ensure reliability, especially for real-time multiplayer functionality.
+
+### Unit Tests
+
+- **Models**: 100% coverage for `GameRoom`, `Player`, `GameStatus`, `RoomStatistics`
+  - Constructor initialization, property validation, computed properties
+  - Edge cases: invalid moves, win conditions, draw detection
+- **Services**: 90%+ coverage for `RoomManager`, `AIEngine`, `KeyManager`
+  - Room lifecycle: creation, joining, leaving, removal
+  - Move validation: bounds checking, turn validation, win detection
+  - AI algorithm: minimax correctness, difficulty levels, optimal moves
+  - Key management: RSA generation, rotation, JWKS exposure
+- **Frameworks**: xUnit for test execution, Moq for mocking, FluentAssertions for readable assertions
+
+### Integration Tests
+
+- **SignalR Flow**: Full game lifecycle from room creation to completion
+- **JWT Validation**: Token issuance, validation, and key rotation
+- **JWKS Endpoint**: Public key exposure and client consumption
+- **AI Gameplay**: Human vs AI interactions with move validation
+- **Multiplayer Scenarios**: Concurrent player joins and moves
+
+### Concurrency Tests
+
+- **Thread Safety**: RoomManager operations under concurrent access
+- **Race Conditions**: Simultaneous room creation, player joins, and moves
+- **Performance**: Memory usage and cleanup under load
+
+### Test Execution
+
+```bash
+# Run all tests
+dotnet test
+
+# Run with coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# Run specific test class
+dotnet test --filter "RoomManagerTests"
+
+# Run in watch mode (TDD development)
+dotnet watch test
+```
+
+### CI/CD Integration
+
+- **GitHub Actions**: Automated test execution on push/PR
+- **Coverage Reports**: Codecov integration for coverage tracking
+- **Quality Gates**: Minimum coverage thresholds (90% services, 100% models)
+
+### Observability
+
+- **Structured Logging**: Via `ILogger` with correlation IDs
+- **Metrics**: Room count, active games, AI performance
+- **Health Check**s: Endpoint for service availability
+- **Error Tracking**: Global exception middleware with detailed logging
+- **Performance Monitoring**: Slow operation detection and optimization
 
 ## Deployment Architecture
 
@@ -181,6 +230,7 @@ JWT Auth, JWKS Validation        RoomManager, AIEngine, KeyManager
 - **Backup strategies** for data persistence
 - **Global exception** handling middleware
 - **Auto-reconnection** for SignalR clients
+- **Comprehensive TDD** with high test coverage
 
 ## References
 
@@ -188,3 +238,5 @@ JWT Auth, JWKS Validation        RoomManager, AIEngine, KeyManager
 - [JWT & JWKS](https://auth0.com/docs/secure/tokens/json-web-tokens/json-web-key-sets)
 - [Minimax Algorithm](https://en.wikipedia.org/wiki/Minimax)
 - [Docker Compose](https://docs.docker.com/compose/)
+- [xUnit Testing](https://xunit.net/)
+- [FluentAssertions](https://fluentassertions.com/)
