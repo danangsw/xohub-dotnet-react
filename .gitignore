@@ -17,3 +17,6 @@ Thumbs.db
 
 # Github folder for storing files and configurations related to GitHub-specific features
 .github/
+
+# VSCode settings folder
+.vscode/
