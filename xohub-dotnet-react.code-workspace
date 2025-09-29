@@ -1,0 +1,73 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.cs": "csharp",
+			"*.tsx": "typescriptreact",
+			"*.ts": "typescript",
+			"*.json": "jsonc",
+			"Dockerfile*": "dockerfile",
+			"docker-compose*.yml": "dockercompose",
+			"docker-compose*.yaml": "dockercompose"
+		},
+		"dotnet.defaultSolution": "xohub-dotnet-react.sln",
+		"dotnet.completion.showCompletionItemsFromUnimportedNamespaces": true,
+		"dotnet.inlayHints.enableInlayHintsForParameters": true,
+		"dotnet.inlayHints.enableInlayHintsForLiteralParameters": true,
+		"dotnet.inlayHints.enableInlayHintsForIndexerParameters": true,
+		"dotnet.inlayHints.enableInlayHintsForObjectCreationParameters": true,
+		"dotnet.inlayHints.enableInlayHintsForOtherParameters": true,
+		"dotnet.inlayHints.suppressInlayHintsForParametersThatDifferOnlyBySuffix": true,
+		"dotnet.inlayHints.suppressInlayHintsForParametersThatMatchMethodIntent": true,
+		"dotnet.inlayHints.suppressInlayHintsForParametersThatMatchArgumentName": true,
+		"csharp.format.enable": true,
+		"csharp.semanticHighlighting.enabled": true,
+		"typescript.preferences.includePackageJsonAutoImports": "on",
+		"javascript.validate.enable": true,
+		"typescript.validate.enable": true,
+		"js/ts.implicitProjectConfig.checkJs": true,
+		"js/ts.implicitProjectConfig.experimentalDecorators": true,
+		"emmet.includeLanguages": {
+			"typescriptreact": "html",
+			"javascriptreact": "html"
+		},
+		"debug.allowBreakpointsEverywhere": true,
+		"debug.inlineValues": "on",
+		"debug.showBreakpointsInOverviewRuler": true,
+		"debug.console.fontSize": 14,
+		"debug.console.lineHeight": 18,
+		"search.smartCase": true,
+		"git.confirmSync": false,
+		"merge-conflict.autoNavigateNextConflict.enabled": true,
+		"terminal.integrated.defaultProfile.windows": "PowerShell",
+		"terminal.integrated.fontSize": 14,
+		"terminal.integrated.fontFamily": "Consolas, 'Courier New', monospace",
+		"terminal.integrated.cursorBlinking": true,
+		"terminal.integrated.cursorStyle": "line",
+		"terminal.integrated.copyOnSelection": true,
+		"terminal.integrated.rightClickBehavior": "paste",
+		"liveServer.settings.donotShowInfoMsg": true,
+		"liveServer.settings.donotVerifyTags": true,
+		"liveServer.settings.CustomBrowser": "chrome",
+		"liveServer.settings.port": 3000,
+		"workbench.editor.enablePreview": false,
+		"workbench.editor.enablePreviewFromQuickOpen": false,
+		"explorer.confirmDelete": false,
+		"explorer.confirmDragAndDrop": false,
+		"omnisharp.enableEditorConfigSupport": true,
+		"omnisharp.useModernNet": true,
+		"workbench.colorTheme": "Default Dark+",
+		"workbench.iconTheme": "vs-seti",
+		"workbench.tree.indent": 20,
+		"window.zoomLevel": 0,
+		"csharp.inlayHints.enableInlayHintsForTypes": true,
+		"csharp.inlayHints.enableInlayHintsForImplicitVariableTypes": true,
+		"csharp.inlayHints.enableInlayHintsForLambdaParameterTypes": true,
+		"csharp.inlayHints.enableInlayHintsForImplicitObjectCreation": true,
+		"dotnet.formatting.organizeImportsOnFormat": true
+	}
+}
