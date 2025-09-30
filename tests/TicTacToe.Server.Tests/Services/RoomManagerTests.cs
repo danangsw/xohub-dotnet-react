@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -160,6 +161,48 @@ public class RoomManagerTests : IDisposable
         var exception = Assert.Throws<ArgumentException>(() =>
             _roomManager.CreateRoom(longRoomId));
         exception.Message.Should().Contain("cannot exceed 50 characters");
+    }
+
+    [Fact]
+    public void CreateRoom_ShouldThrowException_WhenRoomCapacityReached()
+    {
+        // Arrange - Fill the room manager to maximum capacity using reflection
+        var roomsField = typeof(RoomManager).GetField("_rooms", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var roomsDict = roomsField?.GetValue(_roomManager) as ConcurrentDictionary<string, GameRoom>;
+        roomsDict.Should().NotBeNull();
+
+        // Add rooms up to MAX_ROOMS (1000)
+        for (int i = 0; i < 1000; i++)
+        {
+            var roomId = $"capacity-test-room-{i}";
+            var room = new GameRoom
+            {
+                RoomId = roomId,
+                IsAIMode = false,
+                Status = GameStatus.WaitingForPlayers,
+                Board = new char[3, 3],
+                CurrentTurn = "X",
+                LastActivityUtc = DateTime.UtcNow,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            // Initialize board
+            for (int x = 0; x < 3; x++)
+            {
+                for (int y = 0; y < 3; y++)
+                {
+                    room.Board[x, y] = '\0';
+                }
+            }
+            roomsDict!.TryAdd(roomId, room);
+        }
+
+        // Verify we're at capacity
+        roomsDict!.Count.Should().Be(1000);
+
+        // Act & Assert - Try to create one more room
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            _roomManager.CreateRoom("capacity-overflow-room"));
+        exception.Message.Should().Contain("Server at capacity");
     }
 
     #endregion
