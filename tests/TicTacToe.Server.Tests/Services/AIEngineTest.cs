@@ -981,6 +981,25 @@ public class AIEngineTests : IDisposable
         board[result.row, result.col].Should().Be('\0');
     }
 
+    [Fact]
+    public void GetBestMove_EasyDifficulty_OnFullBoard_ShouldReturnInvalidMove()
+    {
+        // Arrange
+        var fullBoard = CreateBoard(new char[,]
+        {
+            { 'X', 'O', 'X' },
+            { 'O', 'X', 'O' },
+            { 'X', 'O', 'X' }
+        });
+
+        // Act & Assert - Run multiple times to ensure both optimal and random paths are tested
+        for (int attempt = 0; attempt < 100; attempt++)
+        {
+            var move = _aiEngine.GetBestMove(fullBoard, 'X', DifficultyLevel.Easy);
+            move.Should().Be((-1, -1));
+        }
+    }
+
     #endregion
 
     #region Helper Methods
