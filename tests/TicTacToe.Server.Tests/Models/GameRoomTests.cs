@@ -41,6 +41,36 @@ public class GameRoomTests
         room.IsGameActive.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("X", true)]
+    [InlineData("O", true)]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    public void HasWinner_ShouldReturn_CorrectValue(string winner, bool expected)
+    {
+        // Arrange
+        var room = new GameRoom { Winner = winner };
+
+        // Act & Assert
+        room.HasWinner.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(GameStatus.WaitingForPlayers, null, false)]
+    [InlineData(GameStatus.Finished, "X", false)]
+    [InlineData(GameStatus.Finished, null, true)]
+    [InlineData(GameStatus.Finished, "", true)]
+    public void IsDraw_ShouldReturnCorrectResult(GameStatus status, string? winner, bool expected)
+    {
+        // Arrange
+        var room = new GameRoom();
+        room.Status = status;
+        room.Winner = winner;
+
+        // Act & Assert
+        room.IsDraw.Should().Be(expected);
+    }
+
     [Fact]
     public void IsDraw_ShouldReturnTrue_WhenFinishedAndNoWinner()
     {
@@ -399,5 +429,71 @@ public class GameRoomTests
         statistics.GameDuration.TotalMinutes.Should().BeApproximately(20, 0.1); // Duration should be from start to finish
         statistics.Winner.Should().BeNull();
         statistics.IsAIMode.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, 0, 'X', "player1", 1.5, false, "player1 placed X at (0, 0) after 1.5 s")]
+    [InlineData(1, 2, 'O', "AI", 0.0, true, "AI placed O at (1, 2) after 0 s")]
+    [InlineData(2, 1, 'X', "human", 3.25, false, "human placed X at (2, 1) after 3.25 s")]
+    public void GameMove_ToString_ShouldReturnCorrectFormat_WithVariousInputs(
+    int row, int col, char mark, string playerId, double thinkTimeSeconds, bool isAIMove, string expected)
+    {
+        // Arrange
+        var move = new GameMove
+        {
+            Row = row,
+            Column = col,
+            Mark = mark,
+            PlayerId = playerId,
+            ThinkTime = TimeSpan.FromSeconds(thinkTimeSeconds),
+            IsAIMove = isAIMove
+        };
+
+        // Act
+        var result = move.ToString();
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0, 0, "(0, 0)")]
+    [InlineData(0, 2, "(0, 2)")]
+    [InlineData(2, 0, "(2, 0)")]
+    [InlineData(2, 2, "(2, 2)")]
+    public void GameMove_ShouldHandleEdgeValues_ForRowAndColumn(int row, int col, string expectedPosition)
+    {
+        // Arrange
+        var move = new GameMove { Row = row, Column = col, Mark = 'X', PlayerId = "test" };
+
+        // Act
+        var result = move.ToString();
+
+        // Assert
+        result.Should().Contain(expectedPosition);
+    }
+
+    [Theory]
+    [InlineData(0.0, "after 0 s")]
+    [InlineData(0.5, "after 0.5 s")]
+    [InlineData(1.0, "after 1 s")]
+    [InlineData(5.5, "after 5.5 s")]
+    public void GameMove_ShouldFormatThinkTimeCorrectly(double seconds, string expectedSuffix)
+    {
+        // Arrange
+        var move = new GameMove
+        {
+            Row = 1,
+            Column = 1,
+            Mark = 'X',
+            PlayerId = "test",
+            ThinkTime = TimeSpan.FromSeconds(seconds)
+        };
+
+        // Act
+        var result = move.ToString();
+
+        // Assert
+        result.Should().EndWith(expectedSuffix);
     }
 }
