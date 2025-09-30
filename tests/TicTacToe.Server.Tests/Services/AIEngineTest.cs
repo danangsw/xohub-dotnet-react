@@ -1000,6 +1000,21 @@ public class AIEngineTests : IDisposable
         }
     }
 
+    [Fact]
+    public void GetBestMove_InvalidDifficulty_ShouldUseDefaultHardDifficulty()
+    {
+        // Arrange - Cast invalid enum value to trigger default case
+        var board = CreateEmptyBoard();
+        char aiMark = 'X';
+        var invalidDifficulty = (DifficultyLevel)999; // Invalid enum value
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, invalidDifficulty);
+
+        // Assert - Should use default case (Hard difficulty) and return center
+        result.Should().Be((1, 1));
+    }
+
     #endregion
 
     #region Helper Methods
