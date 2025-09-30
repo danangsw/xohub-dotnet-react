@@ -447,6 +447,27 @@ public class RoomManagerTests : IDisposable
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public void JoinRoom_ShouldNotStartGame_WhenConditionNotMet()
+    {
+        // Arrange
+        var roomId = "not-ready-test";
+        _roomManager.CreateRoom(roomId); // Regular multiplayer room
+        var player = new Player { ConnectionId = "player1", Name = "Test Player" };
+
+        // Act - Only one player joins regular multiplayer room
+        var result = _roomManager.JoinRoom(roomId, player);
+
+        // Assert
+        result.Should().BeTrue();
+        var room = _roomManager.GetRoom(roomId);
+        room.Should().NotBeNull();
+        room?.Status.Should().Be(GameStatus.WaitingForPlayers); // Game should NOT start
+        room?.Players[0].Should().Be(player);
+        room?.Players[0]?.Mark.Should().Be('X');
+        room?.Players[1].Should().BeNull(); // Second player slot should be empty
+    }
+
     #endregion
 
     #region MakeMove Integration Tests
@@ -1293,7 +1314,7 @@ public class RoomManagerTests : IDisposable
 
         // Assert
         var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('X'); // Human move (X)
+        finalRoom?.Board[0, 0].Should().Be('X'); // Human move
 
         // AI should use 'O' mark
         var aiMoves = 0;
