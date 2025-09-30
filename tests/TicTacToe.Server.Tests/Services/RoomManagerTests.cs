@@ -349,6 +349,29 @@ public class RoomManagerTests : IDisposable
         room?.Players.Count(p => p != null).Should().Be(1);
     }
 
+    [Fact]
+    public void JoinRoom_ShouldReturnFalse_WhenInvalidInput()
+    {
+        // Act & Assert - Test null/empty roomId or null player
+        _roomManager.JoinRoom(null, new Player { ConnectionId = "player1", Name = "Test" }).Should().BeFalse();
+        _roomManager.JoinRoom("", new Player { ConnectionId = "player1", Name = "Test" }).Should().BeFalse();
+        _roomManager.JoinRoom("   ", new Player { ConnectionId = "player1", Name = "Test" }).Should().BeFalse();
+        _roomManager.JoinRoom("room1", null).Should().BeFalse();
+    }
+
+    [Fact]
+    public void JoinRoom_ShouldReturnFalse_WhenRoomDoesNotExist()
+    {
+        // Arrange
+        var player = new Player { ConnectionId = "player1", Name = "Test Player" };
+
+        // Act
+        var result = _roomManager.JoinRoom("non-existent-room", player);
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
     #endregion
 
     #region MakeMove Integration Tests
