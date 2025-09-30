@@ -297,4 +297,107 @@ public class GameRoomTests
         // Assert
         opponent.Should().Be(player1); // Returns first player since neither matches the search ID
     }
+
+    [Fact]
+    public void GetStatistics_ShouldReturnCorrectStatistics_ForDefaultRoom()
+    {
+        // Arrange
+        var room = new GameRoom();
+
+        // Act
+        var statistics = room.GetStatistics();
+
+        // Assert
+        statistics.Should().NotBeNull();
+        statistics.RoomId.Should().Be(room.RoomId);
+        statistics.PlayerCount.Should().Be(0);
+        statistics.Status.Should().Be(GameStatus.WaitingForPlayers);
+        statistics.GameDuration.Should().Be(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void GetStatistics_ShouldReturnCorrectPlayerCount_WhenPlayersExist()
+    {
+        // Arrange
+        var room = new GameRoom();
+        room.RoomId = "test-room";
+        room.Status = GameStatus.InProgress;
+        room.Players[0] = new Player { ConnectionId = "conn1", Name = "Alice", Mark = 'X', UserId = "user1" }; // Player 1
+        room.Players[1] = null; // Player 2 is null
+        room.IsAIMode = true;
+        room.MoveCount = 5;
+        room.CreatedAtUtc = DateTime.UtcNow.AddMinutes(-10);
+
+        // Act
+        var statistics = room.GetStatistics();
+
+        // Assert
+        statistics.Should().NotBeNull();
+        statistics.RoomId.Should().Be("test-room");
+        statistics.Status.Should().Be(GameStatus.InProgress);
+        statistics.PlayerCount.Should().Be(1); // Only one player in the room
+        statistics.IsAIMode.Should().BeTrue();
+        statistics.MoveCount.Should().Be(5);
+        statistics.GameDuration.TotalMinutes.Should().BeApproximately(10, 0.1);
+        statistics.Winner.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetStatistics_ShouldCalculateGameDurationCorrectly_ForInProgressGame()
+    {
+        // Given
+        var room = new GameRoom
+        {
+            Status = GameStatus.InProgress,
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-15) // Game started 15 minutes ago
+        };
+        // When
+        var statistics = room.GetStatistics();
+
+        // Then
+        statistics.GameDuration.TotalMinutes.Should().BeApproximately(15, 0.1);
+        statistics.Winner.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetStatistics_ShouldReturnCorrectStatistics_ForAIModeGame()
+    {
+        // Given
+        var room = new GameRoom
+        {
+            Status = GameStatus.Finished,
+            IsAIMode = true,
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-30), // Game started 30 minutes ago
+            LastActivityUtc = DateTime.UtcNow.AddMinutes(-5), // Last activity 5 minutes ago
+            Winner = "X"
+        };
+        // When
+        var statistics = room.GetStatistics();
+
+        // Then
+        statistics.GameDuration.TotalMinutes.Should().BeApproximately(30, 0.1); // Duration should be from start to finish
+        statistics.Winner.Should().Be("X");
+        statistics.IsAIMode.Should().BeTrue();
+    }
+
+    [Fact]
+    public void GetStatistics_ShouldReturnCorrectStatistics_ForAbandonedGame()
+    {
+        // Given
+        var room = new GameRoom
+        {
+            Status = GameStatus.Finished,
+            IsAIMode = false,
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-20), // Game started 20 minutes ago
+            LastActivityUtc = DateTime.UtcNow.AddMinutes(-10), // Last activity 10 minutes ago
+            Winner = null // No winner, game was abandoned
+        };
+        // When
+        var statistics = room.GetStatistics();
+
+        // Then
+        statistics.GameDuration.TotalMinutes.Should().BeApproximately(20, 0.1); // Duration should be from start to finish
+        statistics.Winner.Should().BeNull();
+        statistics.IsAIMode.Should().BeFalse();
+    }
 }
