@@ -876,6 +876,28 @@ public class RoomManagerTests : IDisposable
         room?.Status.Should().Be(GameStatus.Abandoned); // Room should be abandoned
     }
 
+    [Fact]
+    public void LeaveRoom_ShouldNotMarkRoomAsAbandoned_WhenOtherPlayersRemain()
+    {
+        // Arrange - Multiplayer room with two players
+        _roomManager.CreateRoom("test-room", isAIMode: false);
+        var player1 = new Player { ConnectionId = "conn1", Name = "Player1" };
+        var player2 = new Player { ConnectionId = "conn2", Name = "Player2" };
+        _roomManager.JoinRoom("test-room", player1);
+        _roomManager.JoinRoom("test-room", player2);
+
+        // Act - Player1 leaves, Player2 remains
+        var result = _roomManager.LeaveRoom("test-room", "conn1");
+
+        // Assert
+        result.Should().BeTrue();
+        var room = _roomManager.GetRoom("test-room");
+        room?.Players[0].Should().BeNull(); // Player1 slot empty
+        room?.Players[1].Should().NotBeNull(); // Player2 still there
+        room?.Players[1]?.Name.Should().Be("Player2");
+        room?.Status.Should().Be(GameStatus.InProgress); // Room still active
+    }
+
     #endregion
 
     #region GetAllRooms Integration Tests
