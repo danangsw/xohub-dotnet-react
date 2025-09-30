@@ -418,6 +418,48 @@ public class RoomManagerTests : IDisposable
         room?.Winner.Should().BeNull(); // Draw - no winner
     }
 
+    [Fact]
+    public void MakeMove_ShouldReturnFalse_WhenInvalidInput()
+    {
+        // Act & Assert - Test null/empty roomId or connectionId
+        _roomManager.MakeMove(null, 0, 0, "player1").Should().BeFalse();
+        _roomManager.MakeMove("", 0, 0, "player1").Should().BeFalse();
+        _roomManager.MakeMove("   ", 0, 0, "player1").Should().BeFalse();
+        _roomManager.MakeMove("room1", 0, 0, null).Should().BeFalse();
+        _roomManager.MakeMove("room1", 0, 0, "").Should().BeFalse();
+        _roomManager.MakeMove("room1", 0, 0, "   ").Should().BeFalse();
+    }
+
+    [Fact]
+    public void MakeMove_ShouldReturnFalse_WhenRoomDoesNotExist()
+    {
+        // Act
+        var result = _roomManager.MakeMove("non-existent-room", 0, 0, "player1");
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MakeMove_ShouldReturnFalse_WhenPlayerNotInRoom()
+    {
+        // Arrange
+        var roomId = "player-not-in-room-test";
+        _roomManager.CreateRoom(roomId);
+        var player1 = new Player { ConnectionId = "player1", Name = "Player 1" };
+        var player2 = new Player { ConnectionId = "player2", Name = "Player 2" };
+        _roomManager.JoinRoom(roomId, player1);
+        _roomManager.JoinRoom(roomId, player2);
+
+        // Act - Try to make move with connectionId that doesn't exist in this room
+        var result = _roomManager.MakeMove(roomId, 0, 0, "unknown-player");
+
+        // Assert
+        result.Should().BeFalse();
+        var room = _roomManager.GetRoom(roomId);
+        room?.Board[0, 0].Should().Be('\0'); // Board should remain unchanged
+    }
+
     #endregion
 
     #region RemoveRoom Integration Tests
