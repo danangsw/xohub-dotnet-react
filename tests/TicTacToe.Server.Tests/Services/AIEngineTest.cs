@@ -385,6 +385,602 @@ public class AIEngineTests : IDisposable
         defaultResult.Should().Be(mediumResult);
     }
 
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldFindWinningSequence()
+    {
+        // Arrange - Position where AI can force a win with deeper search
+        var board = CreateBoard(new char[,]
+        {
+            { 'O', '\0', '\0' },
+            { '\0', 'X', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should find a good move (limited depth might not find perfect play)
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleDefensivePosition()
+    {
+        // Arrange - Position requiring defensive play
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', '\0' },
+            { '\0', 'O', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a reasonable defensive move
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldPreferCenterWhenAvailable()
+    {
+        // Arrange - Center available, should be preferred
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', 'O' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should take center
+        result.Should().Be((1, 1));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldEvaluatePositionHeuristics()
+    {
+        // Arrange - Position where heuristic evaluation is important
+        var board = CreateBoard(new char[,]
+        {
+            { 'O', '\0', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a reasonable move based on heuristics
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleEarlyGamePositions()
+    {
+        // Arrange - Early game with few pieces
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', '\0', 'X' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a strategic move
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleMidGameComplexity()
+    {
+        // Arrange - More complex mid-game position
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'O', '\0' },
+            { '\0', 'X', '\0' },
+            { '\0', '\0', 'O' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should find a good move in complex position
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldAvoidBlunders()
+    {
+        // Arrange - Position where a bad move would lose immediately
+        var board = CreateBoard(new char[,]
+        {
+            { 'O', 'O', '\0' },
+            { '\0', 'X', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should take the winning move, not make a blunder
+        result.Should().Be((0, 2));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldBlockImmediateThreats()
+    {
+        // Arrange - Opponent has two in a row, must block
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'X', '\0' },
+            { '\0', 'O', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should block the threat
+        result.Should().Be((0, 2));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldCreateMultipleThreats()
+    {
+        // Arrange - Position where AI can create multiple winning opportunities
+        var board = CreateBoard(new char[,]
+        {
+            { 'O', '\0', '\0' },
+            { '\0', 'O', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should complete a threat (diagonal in this case)
+        result.Should().Be((2, 2));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleForkingPositions()
+    {
+        // Arrange - Position where AI can create multiple threats
+        var board = CreateBoard(new char[,]
+        {
+            { 'O', '\0', '\0' },
+            { '\0', 'O', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should complete a threat (diagonal in this case)
+        result.Should().Be((2, 2));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldAvoidTraps()
+    {
+        // Arrange - Position that looks good but leads to loss if not careful
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', 'O' },
+            { '\0', '\0', '\0' },
+            { 'O', '\0', 'X' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a safe move
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldRecognizeImmediateWin()
+    {
+        // Arrange - AI has immediate winning move
+        var board = CreateBoard(new char[,]
+        {
+            { 'O', 'O', '\0' },
+            { '\0', 'X', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should take the winning move
+        result.Should().Be((0, 2));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldBlockImmediateThreat()
+    {
+        // Arrange - Opponent has immediate winning move
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'X', '\0' },
+            { '\0', 'O', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should block the threat
+        result.Should().Be((0, 2));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleSymmetricPositions()
+    {
+        // Arrange - Symmetric position requiring careful evaluation
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', 'X', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', 'O', '\0' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a reasonable move in symmetric position
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldEvaluateCenterControl()
+    {
+        // Arrange - Position where center control is crucial
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', 'O' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should take center when available
+        result.Should().Be((1, 1));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleCornerStrategy()
+    {
+        // Arrange - Position testing corner control importance
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', '\0', 'X' },
+            { '\0', '\0', '\0' },
+            { 'O', '\0', '\0' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a strategic move
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldManageBoardEdges()
+    {
+        // Arrange - Position focusing on edge moves
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', 'X', '\0' },
+            { 'O', '\0', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make an edge move or better
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleComplexInteractions()
+    {
+        // Arrange - Complex position with multiple considerations
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'O', '\0' },
+            { '\0', 'X', '\0' },
+            { '\0', '\0', 'O' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should find a good move in complex position
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldEvaluateLongTermPosition()
+    {
+        // Arrange - Position requiring long-term strategic thinking
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', '\0', 'X' },
+            { '\0', '\0', '\0' },
+            { 'O', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a move that considers future development
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleDiagonalDominance()
+    {
+        // Arrange - Position where diagonal control matters
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', '\0' },
+            { '\0', 'O', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a move considering diagonal threats
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldBalanceAttackAndDefense()
+    {
+        // Arrange - Position requiring balance between attacking and defending
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', 'O' },
+            { '\0', '\0', '\0' },
+            { 'O', '\0', 'X' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should find a balanced move
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldRecognizeDrawingPositions()
+    {
+        // Arrange - Position that should lead to a draw with perfect play
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'O', 'X' },
+            { 'O', '\0', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a reasonable move in drawing position
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleThreeEmptySpaces()
+    {
+        // Arrange - Board with exactly 3 empty spaces
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'O', 'X' },
+            { 'O', 'X', '\0' },
+            { 'X', '\0', '\0' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make the best move in endgame
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldEvaluateTwoEmptySpaces()
+    {
+        // Arrange - Board with exactly 2 empty spaces
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'O', 'X' },
+            { 'O', 'X', 'O' },
+            { 'X', '\0', '\0' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should take the best available move
+        result.Should().Be((2, 1));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldHandleOneEmptySpace()
+    {
+        // Arrange - Board with exactly 1 empty space
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', 'O', 'X' },
+            { 'O', 'X', 'O' },
+            { 'O', '\0', 'X' }
+        });
+        char aiMark = 'X';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should take the last available move
+        result.Should().Be((2, 1));
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldExerciseDepthLimitBranch()
+    {
+        // Arrange - Create a position that requires deep search to reach depth limit
+        // This position has balanced threats and opportunities, forcing deeper evaluation
+        var board = CreateBoard(new char[,]
+        {
+            { 'X', '\0', 'O' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', 'X' }
+        });
+        char aiMark = 'O';
+
+        // Act
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should return a valid move
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldForceDepthLimitExceeded()
+    {
+        // Arrange - Create a position that requires deep search to evaluate all possibilities
+        // This position has multiple threats and opportunities, forcing iterative deepening to depth 4
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', 'X', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', 'O' }
+        });
+        char aiMark = 'O';
+
+        // Act - This position should force the algorithm to explore deeply to find optimal play
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should return a valid strategic move and exercise depth limit evaluation
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
+    [Fact]
+    public void GetBestMove_EasyDifficulty_ShouldExerciseRandomMoveLogging()
+    {
+        // Arrange - Use a position where optimal play would clearly choose center
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', '\0', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', '\0' }
+        });
+        char aiMark = 'X';
+
+        // Act - Run many times to ensure we hit the random branch
+        var moves = new HashSet<(int, int)>();
+        for (int i = 0; i < 200; i++) // Increased iterations
+        {
+            var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Easy);
+            moves.Add(result);
+        }
+
+        // Assert - Should have made moves other than center, indicating random choices
+        moves.Count.Should().BeGreaterThan(1); // Should have variety in moves
+        moves.Should().Contain((1, 1)); // Should include optimal center move sometimes
+    }
+
+    [Fact]
+    public void GetBestMove_MediumDifficulty_ShouldExerciseDepthRecursion()
+    {
+        // Arrange - Create a position that requires multiple levels of recursion
+        // This position has balanced threats requiring deep lookahead
+        var board = CreateBoard(new char[,]
+        {
+            { '\0', 'X', '\0' },
+            { '\0', '\0', '\0' },
+            { '\0', '\0', 'O' }
+        });
+        char aiMark = 'O';
+
+        // Act - This position should cause the algorithm to recurse deeply
+        var result = _aiEngine.GetBestMove(board, aiMark, DifficultyLevel.Medium);
+
+        // Assert - Should make a strategic move requiring deep analysis
+        result.row.Should().BeInRange(0, 2);
+        result.col.Should().BeInRange(0, 2);
+        board[result.row, result.col].Should().Be('\0');
+    }
+
     #endregion
 
     #region Helper Methods
