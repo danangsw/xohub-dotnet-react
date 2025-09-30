@@ -488,19 +488,55 @@ public class RoomManagerTests : IDisposable
     }
 
     [Fact]
-    public void GetInactiveRooms_ShouldNotReturnActiveRooms()
+    public void GetInactiveRooms_ShouldReturnTimeInactiveRooms()
     {
         // Arrange
-        var roomId = "active-test";
+        var roomId = "time-inactive-test";
         _roomManager.CreateRoom(roomId);
         var player = new Player { ConnectionId = "player1", Name = "Test Player" };
         _roomManager.JoinRoom(roomId, player);
+
+        // Use reflection to set LastActivityUtc to an old timestamp
+        var room = _roomManager.GetRoom(roomId);
+        var lastActivityField = typeof(GameRoom).GetProperty("LastActivityUtc");
+        lastActivityField?.SetValue(room, DateTime.UtcNow.AddMinutes(-10)); // 10 minutes ago
+
+        // Act - Use a 5-minute threshold, so room should be considered inactive
+        var inactiveRooms = _roomManager.GetInactiveRooms(TimeSpan.FromMinutes(5));
+
+        // Assert
+        inactiveRooms.Should().Contain(roomId);
+        inactiveRooms.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void GetInactiveRooms_ShouldReturnBothTimeInactiveAndAbandonedRooms()
+    {
+        // Arrange - Create a time-inactive room
+        var timeInactiveRoomId = "time-inactive-test";
+        _roomManager.CreateRoom(timeInactiveRoomId);
+        var player1 = new Player { ConnectionId = "player1", Name = "Test Player 1" };
+        _roomManager.JoinRoom(timeInactiveRoomId, player1);
+
+        // Make it time-inactive using reflection
+        var timeInactiveRoom = _roomManager.GetRoom(timeInactiveRoomId);
+        var lastActivityField = typeof(GameRoom).GetProperty("LastActivityUtc");
+        lastActivityField?.SetValue(timeInactiveRoom, DateTime.UtcNow.AddMinutes(-10));
+
+        // Arrange - Create an abandoned room
+        var abandonedRoomId = "abandoned-test";
+        _roomManager.CreateRoom(abandonedRoomId);
+        var player2 = new Player { ConnectionId = "player2", Name = "Test Player 2" };
+        _roomManager.JoinRoom(abandonedRoomId, player2);
+        _roomManager.LeaveRoom(abandonedRoomId, "player2"); // This marks as abandoned
 
         // Act
         var inactiveRooms = _roomManager.GetInactiveRooms(TimeSpan.FromMinutes(5));
 
         // Assert
-        inactiveRooms.Should().NotContain(roomId);
+        inactiveRooms.Should().Contain(timeInactiveRoomId);
+        inactiveRooms.Should().Contain(abandonedRoomId);
+        inactiveRooms.Should().HaveCount(2);
     }
 
     #endregion
