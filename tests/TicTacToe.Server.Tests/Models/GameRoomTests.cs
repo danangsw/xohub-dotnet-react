@@ -496,4 +496,88 @@ public class GameRoomTests
         // Assert
         result.Should().EndWith(expectedSuffix);
     }
+
+    [Theory]
+    [InlineData("", null, true, "Both empty")]
+    [InlineData("AI", "user123", true, "ConnectionId is AI")]
+    [InlineData("conn123", "user456", false, "Human player")]
+    [InlineData("", "user789", false, "ConnectionId empty but UserId set")]
+    public void Player_IsAI_ShouldReturnCorrectValue(string connectionId, string? userId, bool expected, string scenario)
+    {
+        // Arrange
+        var player = new Player
+        {
+            ConnectionId = connectionId,
+            UserId = userId
+        };
+
+        // Act & Assert
+        player.IsAI.Should().Be(expected, $"when {scenario}");
+    }
+
+    [Theory]
+    [InlineData(0, 0, 0, "No moves")]
+    [InlineData(1, 2, 2, "Single move")]
+    [InlineData(3, 9, 3, "Multiple moves")]
+    [InlineData(2, 5, 2.5, "Fractional result")]
+    public void Player_AverageThinkTime_ShouldCalculateCorrectly(int movesPlayed, double totalSeconds, double expectedSeconds, string scenario)
+    {
+        // Arrange
+        var player = new Player
+        {
+            MovesPlayed = movesPlayed,
+            TotalThinkTime = TimeSpan.FromSeconds(totalSeconds)
+        };
+
+        // Act
+        var result = player.AverageThinkTime;
+
+        // Assert
+        result.Should().Be(TimeSpan.FromSeconds(expectedSeconds), $"when {scenario}");
+    }
+
+    [Theory]
+    [InlineData("user123", "Alice", "conn456", "user123 | Alice - (conn456)")]
+    [InlineData(null, "Bob", "conn789", " | Bob - (conn789)")]
+    [InlineData("", "Charlie", "conn101", " | Charlie - (conn101)")]
+    [InlineData(null, "Guest", "conn202", " | Guest - (conn202)")]
+    public void Player_ToString_ShouldReturnCorrectFormat(string? userId, string name, string connectionId, string expected)
+    {
+        // Arrange
+        var player = new Player
+        {
+            UserId = userId,
+            Name = name,
+            ConnectionId = connectionId
+        };
+
+        // Act
+        var result = player.ToString();
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0, 0, 'X', "player1", 0.0, "player1 placed X at (0, 0) after 0 s")]
+    [InlineData(2, 2, 'O', "AI", 120.5, "AI placed O at (2, 2) after 120.5 s")]
+    [InlineData(1, 1, 'X', "human", 2.75, "human placed X at (1, 1) after 2.75 s")]
+    public void GameMove_ToString_ShouldHandleVariousThinkTimes(int row, int col, char mark, string playerId, double thinkTimeSeconds, string expected)
+    {
+        // Arrange
+        var move = new GameMove
+        {
+            Row = row,
+            Column = col,
+            Mark = mark,
+            PlayerId = playerId,
+            ThinkTime = TimeSpan.FromSeconds(thinkTimeSeconds)
+        };
+
+        // Act
+        var result = move.ToString();
+
+        // Assert
+        result.Should().Be(expected);
+    }
 }
