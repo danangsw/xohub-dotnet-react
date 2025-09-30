@@ -94,6 +94,10 @@ public class AIEngine : IAIEngine
             int score = Minimax(board, false, aiMark, playerMark, int.MinValue, int.MaxValue, 0);
             board[row, col] = '\0'; // Reset
 
+            // Add position bonus to prefer center/corners
+            int positionBonus = GetPositionBonus(row, col);
+            score += positionBonus;
+
             if (score > bestScore)
             {
                 bestScore = score;
@@ -402,6 +406,16 @@ public class AIEngine : IAIEngine
             return true;
 
         return false;
+    }
+
+    private int GetPositionBonus(int row, int col)
+    {
+        // Center is most valuable
+        if (row == 1 && col == 1) return 3;
+        // Corners are valuable
+        if ((row == 0 || row == 2) && (col == 0 || col == 2)) return 2;
+        // Edges are least valuable
+        return 1;
     }
 
     private bool IsBoardFull(char[,] board)
