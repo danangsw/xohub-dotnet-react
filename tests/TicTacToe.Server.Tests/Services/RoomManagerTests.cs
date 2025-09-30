@@ -92,6 +92,81 @@ public class RoomManagerTests : IDisposable
     }
 
     [Fact]
+    public void MakeMove_ShouldDetectWinCondition_WhenThreeInColumn()
+    {
+        // Arrange
+        var room = _roomManager.CreateRoom("column-win-test");
+        var playerX = new Player { ConnectionId = "player1", Name = "Player X" };
+        var playerO = new Player { ConnectionId = "player2", Name = "Player O" };
+        _roomManager.JoinRoom("column-win-test", playerX);
+        _roomManager.JoinRoom("column-win-test", playerO);
+
+        // Act - Create a column win for X
+        _roomManager.MakeMove("column-win-test", 0, 0, "player1"); // X
+        _roomManager.MakeMove("column-win-test", 0, 1, "player2"); // O
+        _roomManager.MakeMove("column-win-test", 1, 0, "player1"); // X
+        _roomManager.MakeMove("column-win-test", 1, 1, "player2"); // O
+        _roomManager.MakeMove("column-win-test", 2, 0, "player1"); // X - wins column 0
+
+        // Assert
+        var updatedRoom = _roomManager.GetRoom("column-win-test");
+        updatedRoom.Should().NotBeNull();
+        updatedRoom?.Status.Should().Be(GameStatus.Finished);
+        updatedRoom?.Winner.Should().Be("X");
+        updatedRoom?.GameDuration.Should().BeGreaterThan(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void MakeMove_ShouldDetectWinCondition_WhenThreeInDiagonal()
+    {
+        // Arrange
+        var room = _roomManager.CreateRoom("diagonal-win-test");
+        var playerX = new Player { ConnectionId = "player1", Name = "Player X" };
+        var playerO = new Player { ConnectionId = "player2", Name = "Player O" };
+        _roomManager.JoinRoom("diagonal-win-test", playerX);
+        _roomManager.JoinRoom("diagonal-win-test", playerO);
+
+        // Act - Create a main diagonal win for X (0,0 -> 1,1 -> 2,2)
+        _roomManager.MakeMove("diagonal-win-test", 0, 0, "player1"); // X
+        _roomManager.MakeMove("diagonal-win-test", 0, 1, "player2"); // O
+        _roomManager.MakeMove("diagonal-win-test", 1, 1, "player1"); // X
+        _roomManager.MakeMove("diagonal-win-test", 1, 0, "player2"); // O
+        _roomManager.MakeMove("diagonal-win-test", 2, 2, "player1"); // X - wins main diagonal
+
+        // Assert
+        var updatedRoom = _roomManager.GetRoom("diagonal-win-test");
+        updatedRoom.Should().NotBeNull();
+        updatedRoom?.Status.Should().Be(GameStatus.Finished);
+        updatedRoom?.Winner.Should().Be("X");
+        updatedRoom?.GameDuration.Should().BeGreaterThan(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public void MakeMove_ShouldDetectWinCondition_WhenThreeInAntiDiagonal()
+    {
+        // Arrange
+        var room = _roomManager.CreateRoom("anti-diagonal-win-test");
+        var playerX = new Player { ConnectionId = "player1", Name = "Player X" };
+        var playerO = new Player { ConnectionId = "player2", Name = "Player O" };
+        _roomManager.JoinRoom("anti-diagonal-win-test", playerX);
+        _roomManager.JoinRoom("anti-diagonal-win-test", playerO);
+
+        // Act - Create an anti-diagonal win for X (0,2 -> 1,1 -> 2,0)
+        _roomManager.MakeMove("anti-diagonal-win-test", 0, 2, "player1"); // X
+        _roomManager.MakeMove("anti-diagonal-win-test", 0, 0, "player2"); // O
+        _roomManager.MakeMove("anti-diagonal-win-test", 1, 1, "player1"); // X
+        _roomManager.MakeMove("anti-diagonal-win-test", 1, 0, "player2"); // O
+        _roomManager.MakeMove("anti-diagonal-win-test", 2, 0, "player1"); // X - wins anti-diagonal
+
+        // Assert
+        var updatedRoom = _roomManager.GetRoom("anti-diagonal-win-test");
+        updatedRoom.Should().NotBeNull();
+        updatedRoom?.Status.Should().Be(GameStatus.Finished);
+        updatedRoom?.Winner.Should().Be("X");
+        updatedRoom?.GameDuration.Should().BeGreaterThan(TimeSpan.Zero);
+    }
+
+    [Fact]
     public void MakeMove_ShouldTriggerAIMove_WhenAIModeEnabled()
     {
         // Arrange
