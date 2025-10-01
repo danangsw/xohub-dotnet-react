@@ -565,4 +565,37 @@ public class KeyManagerTests : IDisposable
         result.Item1.Should().BeFalse();
         result.Item2.Should().BeNull();
     }
+
+    [Fact]
+    public void GenerateNewKeyPair_LoggerThrowsException_LogsError()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", tempPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Set logger to throwing one using reflection
+        var loggerField = typeof(KeyManager).GetField("_logger", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        loggerField?.SetValue(mgr, new ThrowingInfoLogger());
+
+        // Call GenerateNewKeyPair using reflection - should throw due to logger
+        var method = typeof(KeyManager).GetMethod("GenerateNewKeyPair", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Action act = () => method?.Invoke(mgr, null);
+
+        // Should throw because logger throws in GenerateNewKeyPair
+        act.Should().Throw<TargetInvocationException>().WithInnerException<Exception>().WithMessage("Logger exception");
+
+        // Clean up
+        if (Directory.Exists(tempPath))
+            Directory.Delete(tempPath, true);
+    }
 }
