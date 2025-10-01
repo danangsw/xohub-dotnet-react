@@ -13,7 +13,7 @@ public interface IKeyManager
     string GenerateJwtToken(string userId, string userName);
     JsonWebKeySet GetJwks();
     void RotateKeys();
-    bool ValidateToken(string token, out ClaimsPrincipal? principal);
+    Task<(bool IsValid, ClaimsPrincipal? Principal)> ValidateTokenAsync(string token);  // Changed to async
     Task<bool> IsTokenValidAsync(string token);
 }
 
@@ -37,6 +37,7 @@ public class KeyManager : IKeyManager, IDisposable
     private readonly ILogger<KeyManager> _logger;
     private readonly string _keyStoragePath;
     private readonly object _keyLock = new();
+    private readonly SemaphoreSlim _keySemaphore = new SemaphoreSlim(1, 1);  // Allows 1 concurrent access
 
     // Key management
     private RSA? _currentSigningKey;
@@ -322,63 +323,52 @@ public class KeyManager : IKeyManager, IDisposable
         }
     }
 
-    /// <summary>
-    /// Validates JWT token using current and previous keys
-    /// 
-    /// Validation Process:
-    /// 1. Parse token header to extract key ID
-    /// 2. Select appropriate validation key (current or previous)
-    /// 3. Validate signature using RSA public key
-    /// 4. Validate standard claims (exp, iss, aud)
-    /// 5. Extract claims principal for authorization
-    /// 
-    /// Multi-Key Support:
-    /// - Supports both current and previous keys during rotation window
-    /// - Graceful handling of key rotation without service interruption
-    /// - Automatic fallback between keys
-    /// </summary>
-    public bool ValidateToken(string token, out ClaimsPrincipal? principal)
+    public async Task<(bool IsValid, ClaimsPrincipal? Principal)> ValidateTokenAsync(string token)
     {
-        principal = null;
-
         if (string.IsNullOrWhiteSpace(token))
-            return false;
+            return (false, null);
 
-        lock (_keyLock)
+        await _keySemaphore.WaitAsync();  // Async acquire
+        try
         {
-            try
+            // Try current key first
+            if (_currentSigningKey != null)
             {
-                var tokenHandler = new JsonWebTokenHandler();
-
-                // Try current key first
-                if (_currentSigningKey != null && TryValidateWithKey(token, _currentSigningKey, _currentKeyId, out principal))
+                var success = await TryValidateWithKeyAsync(token, _currentSigningKey, _currentKeyId);
+                if (success.IsValid)
                 {
                     _logger.LogTrace("Token validated with current key {KeyId}", _currentKeyId);
-                    return true;
+                    return success;
                 }
+            }
 
-                // Fallback to previous key
-                if (_previousSigningKey != null && TryValidateWithKey(token, _previousSigningKey, _previousKeyId, out principal))
+            // Fallback to previous key
+            if (_previousSigningKey != null)
+            {
+                var success = await TryValidateWithKeyAsync(token, _previousSigningKey, _previousKeyId);
+                if (success.IsValid)
                 {
                     _logger.LogTrace("Token validated with previous key {KeyId}", _previousKeyId);
-                    return true;
+                    return success;
                 }
+            }
 
-                _logger.LogWarning("Token validation failed - no valid key found");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Exception during token validation");
-                return false;
-            }
+            _logger.LogWarning("Token validation failed - no valid key found");
+            return (false, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during token validation");
+            return (false, null);
+        }
+        finally
+        {
+            _keySemaphore.Release();  // Always release
         }
     }
 
-    private bool TryValidateWithKey(string token, RSA key, string keyId, out ClaimsPrincipal? principal)
+    private async Task<(bool IsValid, ClaimsPrincipal? Principal)> TryValidateWithKeyAsync(string token, RSA key, string keyId)
     {
-        principal = null;
-
         try
         {
             var validationParameters = new TokenValidationParameters
@@ -390,31 +380,33 @@ public class KeyManager : IKeyManager, IDisposable
                 ValidateAudience = true,
                 ValidAudience = _audience,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromMinutes(5), // Allow 5 minutes clock skew
+                ClockSkew = TimeSpan.FromMinutes(5),
                 RequireExpirationTime = true,
                 RequireSignedTokens = true
             };
 
+            // Create an instance of JsonWebTokenHandler and call ValidateTokenAsync
             var tokenHandler = new JsonWebTokenHandler();
-            var result = tokenHandler.ValidateToken(token, validationParameters);
+            var result = await tokenHandler.ValidateTokenAsync(token, validationParameters);
 
             if (result.IsValid)
             {
-                principal = new ClaimsPrincipal(result.ClaimsIdentity);
-                return true;
+                var principal = new ClaimsPrincipal(result.ClaimsIdentity);
+                return (true, principal);
             }
 
-            return false;
+            return (false, null);
         }
         catch
         {
-            return false;
+            return (false, null);
         }
     }
 
     public async Task<bool> IsTokenValidAsync(string token)
     {
-        return await Task.FromResult(ValidateToken(token, out _));
+        var (isValid, _) = await ValidateTokenAsync(token);
+        return isValid;
     }
 
     /// <summary>
@@ -535,12 +527,10 @@ public class KeyManager : IKeyManager, IDisposable
 
     public void Dispose()
     {
-        lock (_keyLock)
-        {
-            _currentSigningKey?.Dispose();
-            _previousSigningKey?.Dispose();
-            _logger.LogInformation("KeyManager disposed");
-        }
+        _keySemaphore.Dispose();
+        _currentSigningKey?.Dispose();
+        _previousSigningKey?.Dispose();
+        _logger.LogInformation("KeyManager disposed");
     }
 }
 
