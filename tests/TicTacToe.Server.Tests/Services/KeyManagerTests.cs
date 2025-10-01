@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Reflection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -533,5 +534,35 @@ public class KeyManagerTests : IDisposable
         // Assert - should catch the exception and return false
         valid.Should().BeFalse();
         principal.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TryValidateWithKeyAsync_NullKey_ThrowsAndCatches_ReturnsFalse()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Pass null as RSA key, which should cause RsaSecurityKey constructor to fail
+        RSA? nullRsa = null;
+        var token = "some.invalid.token";
+        var keyId = "test-key-id";
+
+        // Call TryValidateWithKeyAsync using reflection
+        var method = typeof(KeyManager).GetMethod("TryValidateWithKeyAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var task = (Task<(bool, ClaimsPrincipal?)>)method!.Invoke(mgr, new object[] { token, nullRsa!, keyId })!;
+        var result = await task;
+
+        // Assert - should catch the exception and return false
+        result.Item1.Should().BeFalse();
+        result.Item2.Should().BeNull();
     }
 }
