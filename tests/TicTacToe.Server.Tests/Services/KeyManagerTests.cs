@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
@@ -290,5 +292,108 @@ public class KeyManagerTests : IDisposable
         // Assert
         valid.Should().BeFalse();
         principal.Should().BeNull();
+    }
+
+    [Fact]
+    public void LoadExistingKeys_LoadsPreviousKey_WhenExists()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempPath);
+
+        try
+        {
+            // Generate test keys
+            using var currentRsa = RSA.Create(2048);
+            using var previousRsa = RSA.Create(2048);
+            var currentKeyId = "test-current-key";
+            var previousKeyId = "test-previous-key";
+
+            // Save current key
+            var currentPem = currentRsa.ExportRSAPrivateKeyPem();
+            File.WriteAllText(Path.Combine(tempPath, "current.pem"), currentPem);
+
+            // Save previous key
+            var previousPem = previousRsa.ExportRSAPrivateKeyPem();
+            File.WriteAllText(Path.Combine(tempPath, "previous.pem"), previousPem);
+
+            // Save metadata
+            var metadata = new KeyMetadata
+            {
+                CurrentKeyId = currentKeyId,
+                PreviousKeyId = previousKeyId,
+                LastRotation = DateTime.UtcNow.AddHours(-1)
+            };
+            var metadataJson = JsonSerializer.Serialize(metadata);
+            File.WriteAllText(Path.Combine(tempPath, "metadata.json"), metadataJson);
+
+            // Create KeyManager - should load existing keys
+            var settings = new Dictionary<string, string?>
+            {
+                {"JWT:KeyStoragePath", tempPath},
+                {"JWT:Issuer", "TestIssuer"},
+                {"JWT:Audience", "TestAudience"},
+                {"JWT:TokenLifetimeHours", "1"},
+                {"JWT:KeyRotationHours", "1"},
+                {"JWT:KeyOverlapHours", "2"}
+            };
+            var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+            var mgr = new KeyManager(_loggerMock.Object, config);
+
+            // Verify previous key was loaded (JWKS should have 2 keys since overlap > 0)
+            var jwks = mgr.GetJwks();
+            jwks.Keys.Should().HaveCount(2);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPath))
+                Directory.Delete(tempPath, true);
+        }
+    }
+
+    [Fact]
+    public void LoadExistingKeys_InvalidMetadata_LogsError()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempPath);
+
+        try
+        {
+            // Generate test key
+            using var currentRsa = RSA.Create(2048);
+
+            // Save current key
+            var currentPem = currentRsa.ExportRSAPrivateKeyPem();
+            File.WriteAllText(Path.Combine(tempPath, "current.pem"), currentPem);
+
+            // Save invalid metadata
+            File.WriteAllText(Path.Combine(tempPath, "metadata.json"), "invalid json");
+
+            // Create KeyManager - should catch exception and generate new keys
+            var settings = new Dictionary<string, string?>
+            {
+                {"JWT:KeyStoragePath", tempPath},
+                {"JWT:Issuer", "TestIssuer"},
+                {"JWT:Audience", "TestAudience"},
+                {"JWT:TokenLifetimeHours", "1"},
+                {"JWT:KeyRotationHours", "1"},
+                {"JWT:KeyOverlapHours", "2"}
+            };
+            var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+            var mgr = new KeyManager(_loggerMock.Object, config);
+
+            // Verify error was logged
+            _loggerMock.Verify(x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Failed to load existing keys")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPath))
+                Directory.Delete(tempPath, true);
+        }
     }
 }
