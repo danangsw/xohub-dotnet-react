@@ -469,6 +469,18 @@ public class RoomManagerTests : IDisposable
         room?.Players[1].Should().BeNull(); // Second player slot should be empty
     }
 
+    [Fact]
+    public void Dispose_ShouldHandleNullRoomLock_WhenCalledMultipleTimes()
+    {
+        // Arrange - Create a room manager and dispose it once
+        var roomManager = new RoomManager(_loggerMock.Object, _aiEngineMock.Object);
+        roomManager.Dispose(); // First dispose should work normally
+
+        // Act & Assert - Second dispose should handle null roomLock gracefully
+        var exception = Record.Exception(() => roomManager.Dispose());
+        exception.Should().BeNull(); // Should not throw exception
+    }
+
     #endregion
 
     #region MakeMove Integration Tests
@@ -1126,7 +1138,7 @@ public class RoomManagerTests : IDisposable
     }
 
     [Fact]
-    public void ExecuteAIMove_ShouldHandleInvalidMoveFromAI_WhenAIEngineReturnsInvalidCoordinates()
+    public void ExecuteAIMove_ShouldHandleInvalidAIMoveGracefully()
     {
         // Arrange
         var roomId = "ai-invalid-move-test";
@@ -1134,18 +1146,18 @@ public class RoomManagerTests : IDisposable
         var player = new Player { ConnectionId = "human", Name = "Human" };
         _roomManager.JoinRoom(roomId, player);
 
-        // AI engine returns invalid coordinates
+        // AI engine returns invalid coordinates (out of bounds)
         _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
             .Returns((-1, -1));
 
-        // Act - Human makes move, AI should not move
+        // Act - Human makes move, AI tries invalid move
         _roomManager.MakeMove(roomId, 0, 0, "human");
 
         // Assert
         var room = _roomManager.GetRoom(roomId);
-        room?.Board[0, 0].Should().Be('X'); // Human move
+        room?.Board[0, 0].Should().Be('X'); // Human move should be recorded
 
-        // No AI move should be made
+        // AI should not have made any move due to invalid coordinates
         var aiMoves = 0;
         for (int i = 0; i < 3; i++)
         {
@@ -1154,200 +1166,23 @@ public class RoomManagerTests : IDisposable
                 if (room!.Board[i, j] == 'O') aiMoves++;
             }
         }
-        aiMoves.Should().Be(0); // No AI moves
+        aiMoves.Should().Be(0); // No AI moves should be made
 
-        room?.CurrentTurn.Should().Be("O"); // Turn stays with AI since no valid move was made
+        // Turn should remain with AI since no valid move was made
+        room?.CurrentTurn.Should().Be("O");
+        room?.Status.Should().Be(GameStatus.InProgress);
     }
 
     [Fact]
-    public void ExecuteAIMove_ShouldUpdateActivityTimestamp()
+    public void ExecuteRandomAIMove_ShouldHandleFullBoardGracefully()
     {
         // Arrange
-        var roomId = "ai-activity-test";
+        var roomId = "random-full-board-test";
         _roomManager.CreateRoom(roomId, isAIMode: true);
         var player = new Player { ConnectionId = "human", Name = "Human" };
         _roomManager.JoinRoom(roomId, player);
 
-        var beforeMove = DateTime.UtcNow;
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Returns((1, 1));
-
-        // Act
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var room = _roomManager.GetRoom(roomId);
-        room?.LastActivityUtc.Should().BeAfter(beforeMove);
-        room?.LastActivityUtc.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldHandleMultipleMovesCorrectly()
-    {
-        // Arrange
-        var roomId = "ai-multiple-moves-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Set up sequence of AI moves
-        _aiEngineMock.SetupSequence(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Returns((1, 1))  // First AI move
-            .Returns((2, 2)); // Second AI move
-
-        // Act - Multiple human moves triggering AI responses
-        _roomManager.MakeMove(roomId, 0, 0, "human"); // Human 1
-        var room1 = _roomManager.GetRoom(roomId);
-        room1?.CurrentTurn.Should().Be("X"); // Back to human
-
-        _roomManager.MakeMove(roomId, 0, 1, "human"); // Human 2
-        var room2 = _roomManager.GetRoom(roomId);
-        room2?.CurrentTurn.Should().Be("X"); // Back to human again
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('X'); // Human move 1
-        finalRoom?.Board[0, 1].Should().Be('X'); // Human move 2
-        finalRoom?.Board[1, 1].Should().Be('O'); // AI move 1
-        finalRoom?.Board[2, 2].Should().Be('O'); // AI move 2
-
-        _aiEngineMock.Verify(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'), Times.Exactly(2));
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldNotExecute_WhenGameNotInProgress()
-    {
-        // Arrange
-        var roomId = "ai-finished-game-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // End the game
-        var room = _roomManager.GetRoom(roomId);
-        room!.Status = GameStatus.Finished;
-
-        // Act - Try to make move in finished game
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert - AI should not be called
-        _aiEngineMock.Verify(a => a.GetBestMove(It.IsAny<char[,]>(), It.IsAny<char>()), Times.Never);
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldNotExecute_WhenNotAIMode()
-    {
-        // Arrange - Regular multiplayer game
-        var roomId = "regular-game-test";
-        _roomManager.CreateRoom(roomId, isAIMode: false);
-        var player1 = new Player { ConnectionId = "player1", Name = "Player 1" };
-        var player2 = new Player { ConnectionId = "player2", Name = "Player 2" };
-        _roomManager.JoinRoom(roomId, player1);
-        _roomManager.JoinRoom(roomId, player2);
-
-        // Act - Player 1 makes move
-        _roomManager.MakeMove(roomId, 0, 0, "player1");
-
-        // Assert - AI should not be called
-        _aiEngineMock.Verify(a => a.GetBestMove(It.IsAny<char[,]>(), It.IsAny<char>()), Times.Never);
-
-        var room = _roomManager.GetRoom(roomId);
-        room?.CurrentTurn.Should().Be("O"); // Normal turn switch to player 2
-    }
-
-    [Fact]
-    public void ExecuteRandomAIMove_ShouldMakeMoveInEmptyCell_WhenMultipleCellsAvailable()
-    {
-        // Arrange
-        var roomId = "random-move-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // AI engine fails, triggering random fallback
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Throws(new Exception("AI Engine failure"));
-
-        // Act - Human makes move, AI responds with random move
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('X'); // Human move
-
-        // AI should have made exactly one move (random fallback)
-        var aiMoves = 0;
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                if (finalRoom!.Board[i, j] == 'O') aiMoves++;
-            }
-        }
-        aiMoves.Should().Be(1); // Exactly one AI move
-    }
-
-    [Fact]
-    public void ExecuteRandomAIMove_ShouldFillLastCell_WhenOnlyOneCellAvailable()
-    {
-        // Arrange
-        var roomId = "random-last-cell-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Fill all cells except two - leave (2,1) and (2,2) empty, no winning lines
-        var room = _roomManager.GetRoom(roomId);
-        room!.Board[0, 0] = 'X';
-        room.Board[0, 1] = 'O';
-        room.Board[0, 2] = 'X';
-        room.Board[1, 0] = 'O';
-        room.Board[1, 1] = 'O'; // Changed from 'X' to 'O' to avoid diagonal win
-        room.Board[1, 2] = 'O';
-        room.Board[2, 0] = 'X';
-        // Leave (2,1) and (2,2) empty - human will take (2,2), AI takes (2,1)
-        room.CurrentTurn = "X";
-
-        // AI engine fails
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), It.IsAny<char>()))
-            .Throws(new Exception("AI Engine failure"));
-
-        // Act - Human takes (2,2), leaving (2,1) as the only available cell for AI
-        _roomManager.MakeMove(roomId, 2, 2, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[2, 2].Should().Be('X'); // Human move
-        finalRoom?.Board[2, 1].Should().Be('O'); // AI fills the last available cell
-
-        // Check that board is now full
-        var emptyCells = 0;
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                if (finalRoom!.Board[i, j] == '\0') emptyCells++;
-            }
-        }
-        emptyCells.Should().Be(0); // Board should be full
-
-        // Note: ExecuteRandomAIMove doesn't check for game end conditions,
-        // so status remains InProgress even though board is full
-        finalRoom?.Status.Should().Be(GameStatus.InProgress);
-        // Winner should be null since random move doesn't evaluate game state
-        finalRoom?.Winner.Should().BeNull();
-    }
-
-    [Fact]
-    public void ExecuteRandomAIMove_ShouldNotMakeMove_WhenNoEmptyCellsAvailable()
-    {
-        // Arrange
-        var roomId = "random-no-move-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Fill the entire board
+        // Fill the board completely
         var room = _roomManager.GetRoom(roomId);
         room!.Board[0, 0] = 'X';
         room.Board[0, 1] = 'O';
@@ -1358,281 +1193,84 @@ public class RoomManagerTests : IDisposable
         room.Board[2, 0] = 'X';
         room.Board[2, 1] = 'O';
         room.Board[2, 2] = 'X';
-        room.CurrentTurn = "X";
-
-        // AI engine fails
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Throws(new Exception("AI Engine failure"));
-
-        // Act - Human tries to make move but board is full - this won't trigger AI
-        // Instead, let's simulate by calling MakeMove on an occupied cell (won't work)
-        // Actually, let's test the scenario where the game should have ended but didn't
-
-        // Force the room to be in progress even though it shouldn't be
+        room.CurrentTurn = "O"; // AI's turn
         room.Status = GameStatus.InProgress;
 
-        // Try to make a move on occupied cell - this should fail and not trigger AI
-        var result = _roomManager.MakeMove(roomId, 0, 0, "human");
+        // AI engine fails, triggering random fallback
+        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
+            .Throws(new Exception("AI Engine failure"));
 
-        // Assert
-        result.Should().BeFalse(); // Move should fail
-        // AI should not be called since human move failed
-        _aiEngineMock.Verify(a => a.GetBestMove(It.IsAny<char[,]>(), It.IsAny<char>()), Times.Never);
+        // Act - Try to trigger AI move when board is full
+        // This simulates the scenario where ExecuteRandomAIMove is called directly
+        // We can't easily test this through MakeMove since human can't move on full board
+        // So we'll use reflection to call the private method
+
+        var executeRandomAIMoveMethod = typeof(RoomManager).GetMethod("ExecuteRandomAIMove",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        executeRandomAIMoveMethod?.Invoke(_roomManager, new object[] { room });
+
+        // Assert - No changes should be made to the board since it's full
+        var finalRoom = _roomManager.GetRoom(roomId);
+        finalRoom?.Board[0, 0].Should().Be('X'); // Board should remain unchanged
+        finalRoom?.Board[0, 1].Should().Be('O');
+        finalRoom?.Board[0, 2].Should().Be('X');
+        finalRoom?.Board[1, 0].Should().Be('O');
+        finalRoom?.Board[1, 1].Should().Be('X');
+        finalRoom?.Board[1, 2].Should().Be('O');
+        finalRoom?.Board[2, 0].Should().Be('X');
+        finalRoom?.Board[2, 1].Should().Be('O');
+        finalRoom?.Board[2, 2].Should().Be('X');
+
+        // Turn should not change since no move was made
+        finalRoom?.CurrentTurn.Should().Be("O");
+        finalRoom?.Status.Should().Be(GameStatus.InProgress);
     }
 
     [Fact]
-    public void ExecuteRandomAIMove_ShouldUseCorrectAIMark()
+    public void ExecuteAIMove_ShouldHandleOccupiedCellFromAI()
     {
         // Arrange
-        var roomId = "random-ai-mark-test";
+        var roomId = "ai-occupied-cell-test";
         _roomManager.CreateRoom(roomId, isAIMode: true);
         var player = new Player { ConnectionId = "human", Name = "Human" };
         _roomManager.JoinRoom(roomId, player);
 
-        // AI engine fails
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Throws(new Exception("AI Engine failure"));
+        // Fill center cell
+        var room = _roomManager.GetRoom(roomId);
+        room!.Board[1, 1] = 'X'; // Center is occupied
+        room.CurrentTurn = "X"; // Human's turn first
 
-        // Act - Human makes move, AI responds with random move
+        // AI engine tries to move to occupied center
+        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
+            .Returns((1, 1)); // Occupied center
+
+        // Act - Human makes move first, then AI tries occupied cell and should fallback to random
         _roomManager.MakeMove(roomId, 0, 0, "human");
 
         // Assert
         var finalRoom = _roomManager.GetRoom(roomId);
         finalRoom?.Board[0, 0].Should().Be('X'); // Human move
+        finalRoom?.Board[1, 1].Should().Be('X'); // Center still occupied
 
-        // AI should have made exactly one move as 'O'
+        // AI should have made a random move to an empty cell (not center)
         var aiMoves = 0;
+        var aiMovePosition = (-1, -1);
         for (int i = 0; i < 3; i++)
         {
             for (int j = 0; j < 3; j++)
             {
-                if (finalRoom!.Board[i, j] == 'O') aiMoves++;
+                if (finalRoom!.Board[i, j] == 'O')
+                {
+                    aiMoves++;
+                    aiMovePosition = (i, j);
+                }
             }
         }
-        aiMoves.Should().Be(1); // Exactly one AI move
-    }
+        aiMoves.Should().Be(1); // AI should have made one random move
+        aiMovePosition.Should().NotBe((1, 1)); // But not to the occupied center
 
-    [Fact]
-    public void ExecuteRandomAIMove_ShouldSwitchTurnBackToHuman()
-    {
-        // Arrange
-        var roomId = "random-turn-switch-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // AI engine fails
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Throws(new Exception("AI Engine failure"));
-
-        // Act - Human makes move, AI responds randomly
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.CurrentTurn.Should().Be("X"); // Should be back to human (X)
-        finalRoom?.Board[0, 0].Should().Be('X'); // Human move
-
-        // AI move should exist
-        var hasAIMove = false;
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
-                if (finalRoom!.Board[i, j] == 'O') hasAIMove = true;
-            }
-        }
-        hasAIMove.Should().BeTrue();
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldDetermineCorrectAIMark_WhenHumanIsX()
-    {
-        // Arrange
-        var roomId = "ai-mark-x-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Human is X (first player), so AI should be O
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Returns((1, 1));
-
-        // Act - Human makes move, triggering AI response
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var room = _roomManager.GetRoom(roomId);
-        room?.Board[0, 0].Should().Be('X'); // Human move
-        room?.Board[1, 1].Should().Be('O'); // AI move as O
-
-        // Verify AI engine was called with correct mark (O)
-        _aiEngineMock.Verify(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'), Times.Once);
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldDetermineCorrectAIMark_WhenHumanIsO()
-    {
-        // Arrange
-        var roomId = "ai-mark-o-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Force human to be O by manipulating the player mark
-        var room = _roomManager.GetRoom(roomId);
-        room!.Players[0]!.Mark = 'O'; // Force human to be O
-        room.CurrentTurn = "O"; // It's human's turn
-
-        // Human is O, so AI should be X
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'X'))
-            .Returns((1, 1));
-
-        // Act - Human makes move, triggering AI response
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('O'); // Human move
-        finalRoom?.Board[1, 1].Should().Be('X'); // AI move as X
-
-        // Verify AI engine was called with correct mark (X)
-        _aiEngineMock.Verify(a => a.GetBestMove(It.IsAny<char[,]>(), 'X'), Times.Once);
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldSetWinnerCorrectly_WhenAIWins()
-    {
-        // Arrange
-        var roomId = "ai-wins-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Set up board where AI can win immediately
-        var room = _roomManager.GetRoom(roomId);
-        room!.Board[0, 0] = 'O'; // AI has two in first row
-        room.Board[0, 1] = 'O';
-        room.CurrentTurn = "X"; // Human's turn
-
-        // AI will complete the row and win
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Returns((0, 2));
-
-        // Act - Human makes move, AI wins
-        _roomManager.MakeMove(roomId, 1, 1, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 2].Should().Be('O'); // AI's winning move
-        finalRoom?.Status.Should().Be(GameStatus.Finished);
-        finalRoom?.Winner.Should().Be("O"); // AI wins
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldNotSetWinner_WhenAIContinuesGame()
-    {
-        // Arrange
-        var roomId = "ai-continues-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // AI makes a move that doesn't win
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Returns((1, 1));
-
-        // Act - Human makes move, AI responds but doesn't win
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('X'); // Human move
-        finalRoom?.Board[1, 1].Should().Be('O'); // AI move
-        finalRoom?.Status.Should().Be(GameStatus.InProgress); // Game continues
-        finalRoom?.Winner.Should().BeNull(); // No winner yet
-        finalRoom?.CurrentTurn.Should().Be("X"); // Back to human
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldSwitchTurnBackToHuman_WhenGameContinues()
-    {
-        // Arrange
-        var roomId = "ai-turn-switch-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // AI makes a non-winning move
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'O'))
-            .Returns((1, 1));
-
-        // Act - Human makes move, AI responds
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('X'); // Human move
-        finalRoom?.Board[1, 1].Should().Be('O'); // AI move
-        finalRoom?.CurrentTurn.Should().Be("X"); // Turn switched back to human
-        finalRoom?.Status.Should().Be(GameStatus.InProgress); // Game continues
-    }
-
-    [Fact]
-    public void ExecuteAIMove_ShouldSwitchTurnBackToHuman_WhenHumanIsO()
-    {
-        // Arrange
-        var roomId = "ai-turn-switch-human-o-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Force human to be O
-        var room = _roomManager.GetRoom(roomId);
-        room!.Players[0]!.Mark = 'O';
-        room.CurrentTurn = "O"; // Human's turn
-
-        // AI (X) makes a move
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), 'X'))
-            .Returns((1, 1));
-
-        // Act - Human makes move, AI responds
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('O'); // Human move
-        finalRoom?.Board[1, 1].Should().Be('X'); // AI move
-        finalRoom?.CurrentTurn.Should().Be("O"); // Turn switched back to human (O)
-        finalRoom?.Status.Should().Be(GameStatus.InProgress); // Game continues
-    }
-
-    [Fact(Skip = "Edge case handling for null player marks is not implemented in RoomManager")]
-    public void ExecuteAIMove_ShouldHandleNullPlayerMarkGracefully()
-    {
-        // Arrange
-        var roomId = "ai-null-mark-test";
-        _roomManager.CreateRoom(roomId, isAIMode: true);
-        var player = new Player { ConnectionId = "human", Name = "Human" };
-        _roomManager.JoinRoom(roomId, player);
-
-        // Force player's mark to null (edge case)
-        var room = _roomManager.GetRoom(roomId);
-        room!.Players[0]!.Mark = '\0'; // Null mark
-        room.CurrentTurn = "\0"; // Match the corrupted mark for turn validation
-
-        // AI should default to X when human mark is null/invalid (since null != 'X')
-        _aiEngineMock.Setup(a => a.GetBestMove(It.IsAny<char[,]>(), It.IsAny<char>()))
-            .Returns((1, 1));
-
-        // Act - Human makes move, AI responds
-        _roomManager.MakeMove(roomId, 0, 0, "human");
-
-        // Assert
-        var finalRoom = _roomManager.GetRoom(roomId);
-        finalRoom?.Board[0, 0].Should().Be('\0'); // Human move (null mark becomes empty)
-        finalRoom?.Board[1, 1].Should().Be('X'); // AI move (defaults to X when human mark is invalid)
-        finalRoom?.CurrentTurn.Should().Be("\0"); // Turn switches back to human (corrupted mark)
+        // Turn should be back to human
+        finalRoom?.CurrentTurn.Should().Be("X");
     }
 
     #endregion

@@ -321,24 +321,35 @@ public class RoomManager : IRoomManager
 
             if (aiMove.row != -1 && aiMove.col != -1)
             {
-                room.Board[aiMove.row, aiMove.col] = aiMark;
-                room.LastActivityUtc = DateTime.UtcNow;
-
-                _logger.LogInformation("AI made move ({Row}, {Col}) in room {RoomId}",
-                    aiMove.row, aiMove.col, room.RoomId);
-
-                // Check AI win
-                var aiResult = EvaluateGameState(room.Board, aiMark);
-                if (aiResult != GameResult.Ongoing)
+                // Validate the move is to an empty cell
+                if (room.Board[aiMove.row, aiMove.col] == '\0' || room.Board[aiMove.row, aiMove.col] == ' ')
                 {
-                    room.Status = GameStatus.Finished;
-                    room.Winner = aiResult == GameResult.Win ? aiMark.ToString() : null;
-                    _logger.LogInformation("AI game finished in room {RoomId}: {Result}", room.RoomId, aiResult);
-                    return;
-                }
+                    room.Board[aiMove.row, aiMove.col] = aiMark;
+                    room.LastActivityUtc = DateTime.UtcNow;
 
-                // Switch turn back to human player
-                room.CurrentTurn = room.Players[0]?.Mark.ToString() ?? "X";
+                    _logger.LogInformation("AI made move ({Row}, {Col}) in room {RoomId}",
+                        aiMove.row, aiMove.col, room.RoomId);
+
+                    // Check AI win
+                    var aiResult = EvaluateGameState(room.Board, aiMark);
+                    if (aiResult != GameResult.Ongoing)
+                    {
+                        room.Status = GameStatus.Finished;
+                        room.Winner = aiResult == GameResult.Win ? aiMark.ToString() : null;
+                        _logger.LogInformation("AI game finished in room {RoomId}: {Result}", room.RoomId, aiResult);
+                        return;
+                    }
+
+                    // Switch turn back to human player
+                    room.CurrentTurn = room.Players[0]?.Mark.ToString() ?? "X";
+                }
+                else
+                {
+                    _logger.LogWarning("AI attempted invalid move to occupied cell ({Row}, {Col}) in room {RoomId}",
+                        aiMove.row, aiMove.col, room.RoomId);
+                    // Fallback to random move
+                    ExecuteRandomAIMove(room);
+                }
             }
         }
         catch (Exception ex)

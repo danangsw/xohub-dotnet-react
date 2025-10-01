@@ -171,6 +171,7 @@ public class KeyManager : IKeyManager, IDisposable
             // Dispose old keys
             _currentSigningKey?.Dispose();
             _previousSigningKey?.Dispose();
+            _previousSigningKey = null;
 
             // Generate new RSA key pair (2048-bit)
             _currentSigningKey = RSA.Create(2048);
@@ -533,6 +534,8 @@ public class KeyManager : IKeyManager, IDisposable
         _keySemaphore.Dispose();
         _currentSigningKey?.Dispose();
         _previousSigningKey?.Dispose();
+        _currentSigningKey = null;
+        _previousSigningKey = null;
         _logger.LogInformation("KeyManager disposed");
     }
 }

@@ -291,12 +291,17 @@ public class RoomPrunerTests : IDisposable
         _cts = new CancellationTokenSource();
         var pruner = CreateRoomPruner();
 
+        // Set very short cleanup interval for testing
+        _configSettings["RoomPruner:CleanupIntervalMinutes"] = "0.01"; // 0.6 seconds
+        var config = CreateConfiguration();
+        pruner = new RoomPruner(_roomManagerMock.Object, _keyManagerMock.Object, _loggerMock.Object, config);
+
         _roomManagerMock.Setup(x => x.GetInactiveRooms(It.IsAny<TimeSpan>()))
             .Throws(new Exception("Unexpected database error"));
 
         // Act
         var executeTask = pruner.StartAsync(_cts.Token);
-        await Task.Delay(100);
+        await Task.Delay(1000); // Wait for the error to occur
         await pruner.StopAsync(_cts.Token);
         await executeTask;
 
@@ -450,5 +455,35 @@ public class RoomPrunerTests : IDisposable
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ExitsLoopWhenCancellationRequested()
+    {
+        // Arrange
+        _cts = new CancellationTokenSource();
+        var pruner = CreateRoomPruner();
+
+        _roomManagerMock.Setup(x => x.GetInactiveRooms(It.IsAny<TimeSpan>()))
+            .Returns(new List<string>());
+
+        // Act - start service and immediately cancel
+        var executeTask = pruner.StartAsync(_cts.Token);
+        await Task.Delay(100); // Brief delay to let loop start
+        _cts.Cancel(); // Request cancellation
+        await executeTask; // Wait for completion
+
+        // Assert - task should complete without throwing
+        Assert.True(executeTask.IsCompleted);
+        Assert.False(executeTask.IsFaulted);
+
+        // Verify the "stopped" log is written (indicating loop exit)
+        _loggerMock.Verify(x => x.Log(
+            LogLevel.Information,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("RoomPruner stopped")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
     }
 }

@@ -66,6 +66,11 @@ public class RoomPruner : BackgroundService
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // Cancellation requested, exit the loop
+                break;
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in RoomPruner execution loop");

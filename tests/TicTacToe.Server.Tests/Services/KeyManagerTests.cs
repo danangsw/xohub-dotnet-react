@@ -771,4 +771,125 @@ public class KeyManagerTests : IDisposable
         // Assert - should throw the logger exception (after logging the error)
         act.Should().Throw<Exception>().WithMessage("Logger exception");
     }
+
+    [Fact]
+    public void Constructor_UsesDefaultValuesWhenConfigurationNull()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            // Omit some config values to test defaults
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        // Act
+        var manager = new KeyManager(_loggerMock.Object, config);
+
+        // Assert - verify default values are used
+        var issuerField = typeof(KeyManager).GetField("_issuer", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var audienceField = typeof(KeyManager).GetField("_audience", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var keyStoragePathField = typeof(KeyManager).GetField("_keyStoragePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        var issuer = (string)issuerField!.GetValue(manager)!;
+        var audience = (string)audienceField!.GetValue(manager)!;
+        var keyStoragePath = (string)keyStoragePathField!.GetValue(manager)!;
+
+        issuer.Should().Be("TicTacToeServer");
+        audience.Should().Be("TicTacToeClient");
+        keyStoragePath.Should().Be("/app/keys");
+    }
+
+    [Fact]
+    public void GenerateNewKeyPair_WithPreviousKey_DisposesPreviousKey()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "0"}, // Force rotation
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Rotate to create a previous key
+        mgr.RotateKeys();
+
+        // Verify previous key exists
+        var previousKeyField = typeof(KeyManager).GetField("_previousSigningKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var previousKey = previousKeyField?.GetValue(mgr);
+        previousKey.Should().NotBeNull();
+
+        // Call GenerateNewKeyPair - should dispose previous key
+        var method = typeof(KeyManager).GetMethod("GenerateNewKeyPair", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method?.Invoke(mgr, null);
+
+        // Verify previous key is now null (disposed)
+        var previousKeyAfter = previousKeyField?.GetValue(mgr);
+        previousKeyAfter.Should().BeNull();
+    }
+
+    [Fact]
+    public void Dispose_WithPreviousKey_DisposesPreviousKey()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "0"}, // Force rotation
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Rotate to create a previous key
+        mgr.RotateKeys();
+
+        // Verify previous key exists
+        var previousKeyField = typeof(KeyManager).GetField("_previousSigningKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var previousKey = previousKeyField?.GetValue(mgr);
+        previousKey.Should().NotBeNull();
+
+        // Dispose - should dispose previous key
+        mgr.Dispose();
+
+        // Verify previous key is now null (disposed)
+        var previousKeyAfter = previousKeyField?.GetValue(mgr);
+        previousKeyAfter.Should().BeNull();
+    }
+
+    [Fact]
+    public void RotateKeys_WhenNoPreviousKeyExists_CreatesPreviousKey()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "0"}, // Force rotation
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Verify no previous key initially
+        var previousKeyField = typeof(KeyManager).GetField("_previousSigningKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        var previousKeyBefore = previousKeyField?.GetValue(mgr);
+        previousKeyBefore.Should().BeNull();
+
+        // Rotate keys
+        mgr.RotateKeys();
+
+        // Verify previous key now exists
+        var previousKeyAfter = previousKeyField?.GetValue(mgr);
+        previousKeyAfter.Should().NotBeNull();
+
+        // JWKS should have 2 keys now
+        var jwks = mgr.GetJwks();
+        jwks.Keys.Should().HaveCount(2);
+    }
 }
