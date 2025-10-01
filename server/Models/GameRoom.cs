@@ -167,17 +167,18 @@ public class GameRoom
 /// </summary>
 public class Player
 {
-    private string? _userId = "U000000"; // Backing field with default
+    private static string GUEST_USER_NAME = "Guest";
+    private string? _userId = String.Empty; // Backing field with default
     public string? UserId
     {
-        get => _userId ?? "U000000"; // Always return "U000000" if null
+        get => _userId ?? String.Empty; // Always return "U000000" if null
         set => _userId = value;    // Allow setting to null, but getter handles it
     }
     public string ConnectionId { get; set; } = string.Empty; // SignalR connection ID
-    private string? _name = "Guest"; // Backing field with default
+    private string? _name = GUEST_USER_NAME; // Backing field with default
     public string? Name
     {
-        get => _name ?? "Guest"; // Always return "Guest" if null
+        get => _name ?? GUEST_USER_NAME; // Always return "Guest" if null
         set => _name = value;    // Allow setting to null, but getter handles it
     }
     public DateTime JoinedAtUtc { get; set; } = DateTime.UtcNow;
