@@ -1,10 +1,9 @@
-using System.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using XoHub.Server.Services;
 
-namespace TicTacToe.Server.Tests.Services;
+namespace XoHub.Server.Tests.Services;
 
 public class RoomPrunerTests : IDisposable
 {
