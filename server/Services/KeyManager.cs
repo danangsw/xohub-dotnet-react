@@ -53,15 +53,18 @@ public class KeyManager : IKeyManager, IDisposable
     private readonly TimeSpan _keyRotationInterval;
     private readonly TimeSpan _keyOverlapWindow;
 
+    private TimeSpan _clockSkew;
+
     public KeyManager(ILogger<KeyManager> logger, IConfiguration configuration)
     {
         _logger = logger;
         _keyStoragePath = configuration.GetValue<string>("JWT:KeyStoragePath") ?? "/app/keys";
         _issuer = configuration.GetValue<string>("JWT:Issuer") ?? "TicTacToeServer";
         _audience = configuration.GetValue<string>("JWT:Audience") ?? "TicTacToeClient";
-        _tokenLifetime = TimeSpan.FromHours(configuration.GetValue<int>("JWT:TokenLifetimeHours", 1));
-        _keyRotationInterval = TimeSpan.FromHours(configuration.GetValue<int>("JWT:KeyRotationHours", 1));
-        _keyOverlapWindow = TimeSpan.FromHours(configuration.GetValue<int>("JWT:KeyOverlapHours", 2));
+        _tokenLifetime = TimeSpan.FromHours(configuration.GetValue<double>("JWT:TokenLifetimeHours", 0));
+        _keyRotationInterval = TimeSpan.FromHours(configuration.GetValue<double>("JWT:KeyRotationHours", 1));
+        _keyOverlapWindow = TimeSpan.FromHours(configuration.GetValue<double>("JWT:KeyOverlapHours", 2));
+        _clockSkew = TimeSpan.FromSeconds(configuration.GetValue<int>("JWT:ClockSkewSeconds", 300));
 
         InitializeKeys();
         _logger.LogInformation("KeyManager initialized with {TokenLifetime}h tokens, {RotationInterval}h rotation",
@@ -343,7 +346,7 @@ public class KeyManager : IKeyManager, IDisposable
             }
 
             // Fallback to previous key
-            if (_previousSigningKey != null)
+            if (_previousSigningKey != null && ShouldIncludePreviousKey())
             {
                 var success = await TryValidateWithKeyAsync(token, _previousSigningKey, _previousKeyId);
                 if (success.IsValid)
@@ -380,7 +383,7 @@ public class KeyManager : IKeyManager, IDisposable
                 ValidateAudience = true,
                 ValidAudience = _audience,
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.FromMinutes(5),
+                ClockSkew = TimeSpan.FromSeconds(_clockSkew.TotalSeconds),
                 RequireExpirationTime = true,
                 RequireSignedTokens = true
             };
