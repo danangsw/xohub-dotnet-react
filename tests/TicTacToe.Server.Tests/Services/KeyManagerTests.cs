@@ -122,6 +122,109 @@ public class KeyManagerTests : IDisposable
     }
 
     [Fact]
+    public void GenerateJwtToken_NullUserId_ThrowsArgumentException()
+    {
+        // Act
+        Action act = () => _manager.GenerateJwtToken(null!, "name1");
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("UserId and UserName cannot be null or empty");
+    }
+
+    [Fact]
+    public void GenerateJwtToken_EmptyUserId_ThrowsArgumentException()
+    {
+        // Act
+        Action act = () => _manager.GenerateJwtToken("", "name1");
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("UserId and UserName cannot be null or empty");
+    }
+
+    [Fact]
+    public void GenerateJwtToken_WhitespaceUserId_ThrowsArgumentException()
+    {
+        // Act
+        Action act = () => _manager.GenerateJwtToken("   ", "name1");
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("UserId and UserName cannot be null or empty");
+    }
+
+    [Fact]
+    public void GenerateJwtToken_NullUserName_ThrowsArgumentException()
+    {
+        // Act
+        Action act = () => _manager.GenerateJwtToken("u1", null!);
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("UserId and UserName cannot be null or empty");
+    }
+
+    [Fact]
+    public void GenerateJwtToken_EmptyUserName_ThrowsArgumentException()
+    {
+        // Act
+        Action act = () => _manager.GenerateJwtToken("u1", "");
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("UserId and UserName cannot be null or empty");
+    }
+
+    [Fact]
+    public void GenerateJwtToken_WhitespaceUserName_ThrowsArgumentException()
+    {
+        // Act
+        Action act = () => _manager.GenerateJwtToken("u1", "   ");
+
+        // Assert
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("UserId and UserName cannot be null or empty");
+    }
+
+    [Fact]
+    public void GenerateJwtToken_NoSigningKey_ThrowsInvalidOperationException()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Use reflection to set _currentSigningKey to null
+        var keyField = typeof(KeyManager).GetField("_currentSigningKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        keyField?.SetValue(mgr, null);
+
+        // Act
+        Action act = () => mgr.GenerateJwtToken("u1", "name1");
+
+        // Assert
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("No signing key available");
+
+        // Verify error was logged
+        _loggerMock.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("No signing key available for token generation")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task GenerateJwtToken_Valid_And_ValidateAsync()
     {
         var token = _manager.GenerateJwtToken("u1", "name1");
