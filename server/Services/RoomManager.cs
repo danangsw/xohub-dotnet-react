@@ -139,7 +139,7 @@ public class RoomManager : IRoomManager
     /// 
     /// Concurrency: Uses write lock to ensure consistent state updates
     /// </summary>
-    public bool JoinRoom(string roomId, Player player)
+    public bool JoinRoom(string? roomId, Player? player)
     {
         if (string.IsNullOrWhiteSpace(roomId) || player == null)
         {
@@ -217,7 +217,7 @@ public class RoomManager : IRoomManager
     /// 
     /// Algorithm Complexity: O(1) for move validation, O(1) for win detection
     /// </summary>
-    public bool MakeMove(string roomId, int row, int col, string connectionId)
+    public bool MakeMove(string? roomId, int row, int col, string? connectionId)
     {
         // Input validation
         if (string.IsNullOrWhiteSpace(roomId) || string.IsNullOrWhiteSpace(connectionId))

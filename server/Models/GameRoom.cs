@@ -167,9 +167,19 @@ public class GameRoom
 /// </summary>
 public class Player
 {
-    public string? UserId { get; set; } // Optional persistent user ID
+    private string? _userId = "U000000"; // Backing field with default
+    public string? UserId
+    {
+        get => _userId ?? "U000000"; // Always return "U000000" if null
+        set => _userId = value;    // Allow setting to null, but getter handles it
+    }
     public string ConnectionId { get; set; } = string.Empty; // SignalR connection ID
-    public string Name { get; set; } = "Guest"; // Display name
+    private string? _name = "Guest"; // Backing field with default
+    public string? Name
+    {
+        get => _name ?? "Guest"; // Always return "Guest" if null
+        set => _name = value;    // Allow setting to null, but getter handles it
+    }
     public DateTime JoinedAtUtc { get; set; } = DateTime.UtcNow;
     public int MovesPlayed { get; set; } = 0; // How many moves the player has made
     public char Mark { get; set; } // 'X' or 'O', assigned at join time
