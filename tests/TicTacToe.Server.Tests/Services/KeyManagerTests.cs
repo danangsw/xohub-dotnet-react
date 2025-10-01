@@ -12,6 +12,23 @@ using Xunit;
 
 namespace XoHub.Server.Tests.Services;
 
+public class ThrowingLogger : ILogger<KeyManager>
+{
+    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        if (logLevel == LogLevel.Warning) throw new Exception("Logger exception");
+    }
+}
+
+public class DummyDisposable : IDisposable
+{
+    public void Dispose() { }
+}
+
 public class KeyManagerTests : IDisposable
 {
     private readonly Mock<ILogger<KeyManager>> _loggerMock = new();
@@ -250,5 +267,28 @@ public class KeyManagerTests : IDisposable
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ValidateTokenAsync_LoggerThrowsException_ReturnsFalse()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "0"} // No overlap to force warning log
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var mgr = new KeyManager(new ThrowingLogger(), config);
+
+        // Act - use invalid token to trigger the warning log which throws
+        var (valid, principal) = await mgr.ValidateTokenAsync("invalid.token");
+
+        // Assert
+        valid.Should().BeFalse();
+        principal.Should().BeNull();
     }
 }
