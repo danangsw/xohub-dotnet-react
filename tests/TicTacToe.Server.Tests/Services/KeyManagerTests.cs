@@ -744,4 +744,31 @@ public class KeyManagerTests : IDisposable
         if (File.Exists(tempFile))
             File.Delete(tempFile);
     }
+
+    [Fact]
+    public void RotateKeys_LoggerThrowsExceptionDuringRotation_CatchesAndLogsError()
+    {
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "0"}, // Force immediate rotation
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Use reflection to set logger to throwing one after construction
+        var loggerField = typeof(KeyManager).GetField("_logger", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        loggerField?.SetValue(mgr, new ThrowingInfoLogger());
+
+        // Act - should catch exception from logger and log error
+        Action act = () => mgr.RotateKeys();
+
+        // Assert - should throw the logger exception (after logging the error)
+        act.Should().Throw<Exception>().WithMessage("Logger exception");
+    }
 }
