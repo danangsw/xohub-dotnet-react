@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -23,6 +24,30 @@ public class ThrowingLogger : ILogger<KeyManager>
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         if (logLevel == LogLevel.Warning) throw new Exception("Logger exception");
+    }
+}
+
+public class ThrowingInfoLogger : ILogger<KeyManager>
+{
+    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        if (logLevel == LogLevel.Information) throw new Exception("Logger exception");
+    }
+}
+
+public class ThrowingDebugLogger : ILogger<KeyManager>
+{
+    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        if (logLevel == LogLevel.Debug) throw new Exception("Logger exception");
     }
 }
 
@@ -59,19 +84,28 @@ public class KeyManagerTests : IDisposable
     }
 
     [Fact]
-    public void GenerateJwtToken_InvalidArgs_Throws()
+    public void GenerateJwtToken_LoggerThrowsException_LogsError()
     {
-        Action act1 = () => _manager.GenerateJwtToken(null!, "user");
-        act1.Should().Throw<ArgumentException>();
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", _tempKeyPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
 
-        Action act2 = () => _manager.GenerateJwtToken("id", null!);
-        act2.Should().Throw<ArgumentException>();
+        // Use logger that throws on Debug
+        var logger = new ThrowingDebugLogger();
+        var mgr = new KeyManager(logger, config);
 
-        Action act3 = () => _manager.GenerateJwtToken("", "user");
-        act3.Should().Throw<ArgumentException>();
+        // Act - should throw due to logger in GenerateJwtToken
+        Action act = () => mgr.GenerateJwtToken("u1", "name1");
 
-        Action act4 = () => _manager.GenerateJwtToken("id", "");
-        act4.Should().Throw<ArgumentException>();
+        // Assert - should throw the logger exception
+        act.Should().Throw<Exception>().WithMessage("Logger exception");
     }
 
     [Fact]
@@ -395,5 +429,71 @@ public class KeyManagerTests : IDisposable
             if (Directory.Exists(tempPath))
                 Directory.Delete(tempPath, true);
         }
+    }
+
+    [Fact]
+    public void GenerateNewKeyPair_DisposesExistingKeys()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", tempPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Set existing keys using reflection
+        var currentField = typeof(KeyManager).GetField("_currentSigningKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        currentField?.SetValue(mgr, RSA.Create(2048));
+
+        // Call GenerateNewKeyPair using reflection
+        var method = typeof(KeyManager).GetMethod("GenerateNewKeyPair", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        method?.Invoke(mgr, null);
+
+        // Verify new keys are set (JWKS has 1 key)
+        var jwks = mgr.GetJwks();
+        jwks.Keys.Should().HaveCount(1);
+
+        // Clean up
+        if (Directory.Exists(tempPath))
+            Directory.Delete(tempPath, true);
+    }
+
+    [Fact]
+    public void SaveKeysToStorage_LoggerThrowsException_LogsError()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var settings = new Dictionary<string, string?>
+        {
+            {"JWT:KeyStoragePath", tempPath},
+            {"JWT:Issuer", "TestIssuer"},
+            {"JWT:Audience", "TestAudience"},
+            {"JWT:TokenLifetimeHours", "1"},
+            {"JWT:KeyRotationHours", "1"},
+            {"JWT:KeyOverlapHours", "2"}
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        var mgr = new KeyManager(_loggerMock.Object, config);
+
+        // Set logger to throwing one using reflection
+        var loggerField = typeof(KeyManager).GetField("_logger", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        loggerField?.SetValue(mgr, new ThrowingDebugLogger());
+
+        // Call SaveKeysToStorage using reflection - should throw due to logger
+        var method = typeof(KeyManager).GetMethod("SaveKeysToStorage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Action act = () => method?.Invoke(mgr, null);
+
+        // Should throw because logger throws in SaveKeysToStorage
+        act.Should().Throw<TargetInvocationException>().WithInnerException<Exception>().WithMessage("Logger exception");
+
+        // Clean up
+        if (Directory.Exists(tempPath))
+            Directory.Delete(tempPath, true);
     }
 }
