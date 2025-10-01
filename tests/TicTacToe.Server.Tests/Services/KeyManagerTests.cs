@@ -600,12 +600,14 @@ public class KeyManagerTests : IDisposable
     }
 
     [Fact]
-    public void RotateKeys_LoggerThrowsException_LogsError()
+    public void RotateKeys_SaveKeysToStorageFails_CatchesAndLogsError()
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".txt");
+        File.WriteAllText(tempFile, "dummy"); // Create a file where directory should be
+
         var settings = new Dictionary<string, string?>
         {
-            {"JWT:KeyStoragePath", tempPath},
+            {"JWT:KeyStoragePath", Path.GetTempPath()}, // Valid path for construction
             {"JWT:Issuer", "TestIssuer"},
             {"JWT:Audience", "TestAudience"},
             {"JWT:TokenLifetimeHours", "1"},
@@ -616,18 +618,27 @@ public class KeyManagerTests : IDisposable
 
         var mgr = new KeyManager(_loggerMock.Object, config);
 
-        // Set logger to throwing one using reflection
-        var loggerField = typeof(KeyManager).GetField("_logger", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        loggerField?.SetValue(mgr, new ThrowingInfoLogger());
+        // Use reflection to set invalid path that will cause SaveKeysToStorage to fail
+        var pathField = typeof(KeyManager).GetField("_keyStoragePath", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        pathField?.SetValue(mgr, tempFile);
 
-        // Act - should throw due to logger in RotateKeys
+        // Act - should catch exception from SaveKeysToStorage and log error
         Action act = () => mgr.RotateKeys();
 
-        // Assert - should throw the logger exception
-        act.Should().Throw<Exception>().WithMessage("Logger exception");
+        // Assert - should throw the original exception (after logging)
+        act.Should().Throw<Exception>();
+
+        // Verify error was logged
+        _loggerMock.Verify(x => x.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Key rotation failed")),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
 
         // Clean up
-        if (Directory.Exists(tempPath))
-            Directory.Delete(tempPath, true);
+        if (File.Exists(tempFile))
+            File.Delete(tempFile);
     }
 }
