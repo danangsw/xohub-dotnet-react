@@ -18,7 +18,6 @@ public class AuthController : ApiControllerBase
 {
     private readonly IKeyManager _keyManager;
     private readonly IAuthService _authService;
-    private readonly ILogger<AuthController> _logger;
 
     // Security constants
     private const int MAX_REQUEST_SIZE_BYTES = 4096; // 4KB max request size
@@ -32,7 +31,6 @@ public class AuthController : ApiControllerBase
     {
         _keyManager = keyManager ?? throw new ArgumentNullException(nameof(keyManager));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     [HttpPost("login")]
@@ -172,7 +170,7 @@ public class AuthController : ApiControllerBase
                 LastActivity = DateTime.UtcNow
             };
 
-            _logger.LogDebug("User status requested: {UserId} from IP: {IP}, RequestId: {RequestId}",
+            _logger.LogInformation("User status requested: {UserId} from IP: {IP}, RequestId: {RequestId}",
                 userId, clientIP, requestId);
 
             return Ok(response);
@@ -284,21 +282,4 @@ public class AuthController : ApiControllerBase
     }
 
     #endregion
-}
-
-// Enhanced response models
-public class LoginResponse
-{
-    public string Token { get; set; } = string.Empty;
-    public string UserId { get; set; } = string.Empty;
-    public int ExpiresIn { get; set; }
-    public string TokenType { get; set; } = string.Empty;
-}
-
-public class UserStatusResponse
-{
-    public string UserId { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
-    public bool IsAuthenticated { get; set; }
-    public DateTime LastActivity { get; set; }
 }

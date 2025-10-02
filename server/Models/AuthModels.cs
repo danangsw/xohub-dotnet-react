@@ -14,8 +14,19 @@ public class LoginRequest
     public string Password { get; set; } = string.Empty;
 }
 
+// Enhanced response models
 public class LoginResponse
 {
     public string Token { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
+    public int ExpiresIn { get; set; }
+    public string TokenType { get; set; } = string.Empty;
+}
+
+public class UserStatusResponse
+{
+    public string UserId { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public bool IsAuthenticated { get; set; }
+    public DateTime LastActivity { get; set; }
 }
