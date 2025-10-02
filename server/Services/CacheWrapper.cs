@@ -1,8 +1,18 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace XoHub.Server.Services;
+
+/// <summary>
+/// Wrapper interface for distributed cache operations to enable proper unit testing
+/// </summary>
+public interface ICacheWrapper
+{
+    Task<string?> GetStringAsync(string key, CancellationToken token);
+    Task SetStringAsync(string key, string value, CancellationToken token);
+}
 
 /// <summary>
 /// Implementation of ICacheWrapper using IDistributedCache
@@ -13,7 +23,7 @@ public class CacheWrapper : ICacheWrapper
 
     public CacheWrapper(IDistributedCache cache)
     {
-        _cache = cache;
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     public Task<string?> GetStringAsync(string key, CancellationToken token)

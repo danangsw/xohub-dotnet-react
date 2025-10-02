@@ -278,6 +278,139 @@ public class JwksControllerTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task GetJwks_WithCacheHit_ReturnsCachedResponse()
+    {
+        // Arrange
+        var cachedJson = "{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"cached-key\"}]}";
+        _cacheMock.Setup(x => x.GetStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedJson);
+
+        // Act
+        var result = await _controller.GetJwks();
+
+        // Assert
+        var contentResult = Assert.IsType<ContentResult>(result);
+        Assert.Equal(cachedJson, contentResult.Content);
+        Assert.Equal("application/json", contentResult.ContentType);
+
+        // Verify key manager was not called
+        _keyManagerMock.Verify(x => x.GetJwks(), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetJwks_WithCacheHit_LogsDebugMessage()
+    {
+        // Arrange
+        var cachedJson = "{\"keys\":[]}";
+        _cacheMock.Setup(x => x.GetStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedJson);
+
+        // Act
+        await _controller.GetJwks();
+
+        // Assert
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Debug,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Returning cached JWKS response")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task GetJwks_WithEmptyStringCache_TreatAsNull()
+    {
+        // Arrange
+        _cacheMock.Setup(x => x.GetStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(string.Empty);
+
+        var jwks = new JsonWebKeySet();
+        _keyManagerMock.Setup(x => x.GetJwks())
+            .Returns(jwks);
+
+        // Act
+        var result = await _controller.GetJwks();
+
+        // Assert
+        Assert.IsType<ContentResult>(result);
+        _keyManagerMock.Verify(x => x.GetJwks(), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetJwks_VerifiesCacheKey()
+    {
+        // Arrange
+        _cacheMock.Setup(x => x.GetStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var jwks = new JsonWebKeySet();
+        _keyManagerMock.Setup(x => x.GetJwks())
+            .Returns(jwks);
+
+        // Act
+        await _controller.GetJwks();
+
+        // Assert
+        _cacheMock.Verify(x => x.GetStringAsync("jwks_response", It.IsAny<CancellationToken>()), Times.Once);
+        _cacheMock.Verify(x => x.SetStringAsync("jwks_response", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetJwks_VerifiesJsonSerializationOptions()
+    {
+        // Arrange
+        _cacheMock.Setup(x => x.GetStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var jwks = new JsonWebKeySet();
+        var key = new JsonWebKey
+        {
+            Kty = "RSA",
+            Kid = "test-key",
+            Use = "sig"
+        };
+        jwks.Keys.Add(key);
+
+        _keyManagerMock.Setup(x => x.GetJwks())
+            .Returns(jwks);
+
+        string? capturedJson = null;
+        _cacheMock.Setup(x => x.SetStringAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((key, value, token) => capturedJson = value);
+
+        // Act
+        await _controller.GetJwks();
+
+        // Assert
+        Assert.NotNull(capturedJson);
+        Assert.DoesNotContain("  ", capturedJson); // No double spaces (compact format)
+        Assert.DoesNotContain("\n", capturedJson); // No newlines
+        Assert.DoesNotContain("\r", capturedJson); // No carriage returns
+    }
+
+    [Fact]
+    public async Task GetJwks_WithNullHttpContext_HandlesGracefully()
+    {
+        // Arrange
+        _cacheMock.Setup(x => x.GetStringAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        var jwks = new JsonWebKeySet();
+        _keyManagerMock.Setup(x => x.GetJwks())
+            .Returns(jwks);
+
+        // Controller's HttpContext will be null in unit tests by default
+        // Act
+        var result = await _controller.GetJwks();
+
+        // Assert
+        Assert.IsType<ContentResult>(result);
+        _cacheMock.Verify(x => x.GetStringAsync(It.IsAny<string>(), CancellationToken.None), Times.Once);
+    }
+
     #endregion
 
     #region Serialization Tests
