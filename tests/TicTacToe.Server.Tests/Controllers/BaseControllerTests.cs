@@ -435,8 +435,8 @@ public class BaseControllerTests
         // Assert
         Assert.NotNull(result);
         var response = result.Value;
-        var responseType = response.GetType();
-        var messageProperty = responseType.GetProperty("message");
+        var responseType = response?.GetType();
+        var messageProperty = responseType?.GetProperty("message");
         Assert.Null(messageProperty?.GetValue(response));
     }
 
@@ -468,8 +468,8 @@ public class BaseControllerTests
         // Assert
         Assert.NotNull(result);
         var response = result.Value;
-        var responseType = response.GetType();
-        var dataProperty = responseType.GetProperty("data");
+        var responseType = response?.GetType();
+        var dataProperty = responseType?.GetProperty("data");
         Assert.Equal(testList, dataProperty?.GetValue(response));
     }
 
@@ -685,8 +685,8 @@ public class BaseControllerTests
         // Assert
         Assert.NotNull(result);
         var response = result.Value;
-        var responseType = response.GetType();
-        var dataProperty = responseType.GetProperty("data");
+        var responseType = response?.GetType();
+        var dataProperty = responseType?.GetProperty("data");
         Assert.Equal(complexObject, dataProperty?.GetValue(response));
     }
 

@@ -18,7 +18,7 @@ namespace XoHub.Server.Tests.Services;
 
 public class ThrowingLogger : ILogger<KeyManager>
 {
-    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull => new DummyDisposable();
 
     public bool IsEnabled(LogLevel logLevel) => true;
 
@@ -30,7 +30,7 @@ public class ThrowingLogger : ILogger<KeyManager>
 
 public class ThrowingInfoLogger : ILogger<KeyManager>
 {
-    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull => new DummyDisposable();
 
     public bool IsEnabled(LogLevel logLevel) => true;
 
@@ -42,7 +42,7 @@ public class ThrowingInfoLogger : ILogger<KeyManager>
 
 public class ThrowingDebugLogger : ILogger<KeyManager>
 {
-    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull => new DummyDisposable();
 
     public bool IsEnabled(LogLevel logLevel) => true;
 
@@ -54,7 +54,7 @@ public class ThrowingDebugLogger : ILogger<KeyManager>
 
 public class ThrowingTraceLogger : ILogger<KeyManager>
 {
-    public IDisposable BeginScope<TState>(TState state) => new DummyDisposable();
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull => new DummyDisposable();
 
     public bool IsEnabled(LogLevel logLevel) => true;
 

@@ -345,9 +345,10 @@ public class TicTacToeHubTests
         // Arrange
         var roomId = "test-room";
         var playerName = "TestPlayer";
+        GameRoom? gameRoom = null;
 
         _roomManagerMock.Setup(rm => rm.JoinRoom(roomId, It.IsAny<Player>())).Returns(true);
-        _roomManagerMock.Setup(rm => rm.GetRoom(roomId)).Returns((GameRoom)null); // Room is null
+        _roomManagerMock.Setup(rm => rm.GetRoom(roomId)).Returns(gameRoom); // Room is null
 
         // Act
         await _hub.JoinRoom(roomId, playerName);
