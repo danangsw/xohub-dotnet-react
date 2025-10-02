@@ -11,10 +11,10 @@ using XoHub.Server.Services;
 namespace XoHub.Server.Controllers;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("{versionPrefix}/[controller]")] // Dynamic route prefix from configuration
 [EnableRateLimiting("AuthRateLimit")]
 [Produces("application/json")]
-public class AuthController : ControllerBase
+public class AuthController : ApiControllerBase
 {
     private readonly IKeyManager _keyManager;
     private readonly IAuthService _authService;
@@ -27,7 +27,8 @@ public class AuthController : ControllerBase
     public AuthController(
         IKeyManager keyManager,
         IAuthService authService,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IConfiguration configuration) : base(configuration)
     {
         _keyManager = keyManager ?? throw new ArgumentNullException(nameof(keyManager));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
@@ -112,57 +113,6 @@ public class AuthController : ControllerBase
             return CreateProblemDetails(
                 "Internal server error",
                 "An unexpected error occurred. Please try again later.",
-                StatusCodes.Status500InternalServerError,
-                requestId);
-        }
-    }
-
-    [HttpGet(".well-known/jwks.json")]
-    [AllowAnonymous]
-    [EnableRateLimiting("JwksRateLimit")]
-    [ProducesResponseType(typeof(JsonWebKeySet), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-    [ResponseCache(Duration = 3600, Location = ResponseCacheLocation.Any)] // Cache for 1 hour
-    public IActionResult GetJwks()
-    {
-        var requestId = Guid.NewGuid().ToString();
-        var clientIP = GetClientIP();
-
-        try
-        {
-            // Rate limiting for JWKS endpoint
-            if (HttpContext.RequestServices.GetService<IAuthService>() is IAuthService authService &&
-                authService.IsRateLimitExceededAsync(clientIP, "jwks").Result)
-            {
-                _logger.LogWarning("Rate limit exceeded for JWKS request from IP: {IP}, RequestId: {RequestId}",
-                    clientIP, requestId);
-                return CreateProblemDetails(
-                    "Too many requests",
-                    "Rate limit exceeded. Please try again later.",
-                    StatusCodes.Status429TooManyRequests,
-                    requestId);
-            }
-
-            var jwks = _keyManager.GetJwks();
-
-            // Security headers for JWKS endpoint
-            Response.Headers["Cache-Control"] = "public, max-age=3600";
-            Response.Headers["X-Content-Type-Options"] = "nosniff";
-
-            _logger.LogDebug("JWKS requested from IP: {IP}, Keys returned: {KeyCount}, RequestId: {RequestId}",
-                clientIP, jwks.Keys.Count, requestId);
-
-            return Ok(jwks);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving JWKS from IP: {IP}, RequestId: {RequestId}",
-                clientIP, requestId);
-
-            return CreateProblemDetails(
-                "Internal server error",
-                "Unable to retrieve key information. Please try again later.",
                 StatusCodes.Status500InternalServerError,
                 requestId);
         }
