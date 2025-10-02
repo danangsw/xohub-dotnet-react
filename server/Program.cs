@@ -2,12 +2,18 @@ using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using XoHub.Server.Hubs;
 using XoHub.Server.Services;
+
+string API_VERSION_PREFIX = "api/v1";
+string APP_NAME = "TicTacToe Server";
+string APP_VERSION = "1.0.0";
+string DEV_URI = "http://localhost:5000";
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -259,6 +265,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Comment out for local testing with HTTP
 app.UseHttpsRedirection();
 
 // Rate limiting (before CORS and authentication)
@@ -272,6 +279,15 @@ app.UseStaticFiles();
 
 // Routing
 app.UseRouting();
+
+app.Use(async (context, next) =>
+{
+    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+    var versionPrefix = configuration["ApiSettings:VersionPrefix"] ?? API_VERSION_PREFIX;
+
+    context.Request.RouteValues["versionPrefix"] = versionPrefix;
+    await next();
+});
 
 // Authentication & Authorization
 app.UseAuthentication();
@@ -305,11 +321,23 @@ else
 // ==========================================
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-logger.LogInformation("Starting TicTacToe Server v1.0");
-logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
-logger.LogInformation("SignalR Hub: /tictactoehub");
-logger.LogInformation("JWKS Endpoint: /.well-known/jwks.json");
-logger.LogInformation("Health Check: /health");
+var serverAddresses = app.Urls; // Get the actual listening URLs
+
+var appName = builder.Configuration["Application:Name"] ?? APP_NAME;
+var appVersion = builder.Configuration["Application:Version"] ?? APP_VERSION;
+var apiVersion = builder.Configuration["ApiSettings:VersionPrefix"] ?? API_VERSION_PREFIX;
+
+logger.LogInformation("🚀 Starting {AppName} v{AppVersion}", appName, appVersion);
+logger.LogInformation("🌍 Environment: {Environment}", app.Environment.EnvironmentName);
+logger.LogInformation("📡 Listening on:");
+foreach (var url in serverAddresses)
+{
+    logger.LogInformation("   🔗 {Url}", url);
+}
+logger.LogInformation("🎮 SignalR Hub: {BaseUrl}/tictactoehub", serverAddresses.FirstOrDefault() ?? DEV_URI);
+logger.LogInformation("🔐 JWKS Endpoint: {BaseUrl}/.well-known/jwks.json", serverAddresses.FirstOrDefault() ?? DEV_URI);
+logger.LogInformation("💚 Health Check: {BaseUrl}/health", serverAddresses.FirstOrDefault() ?? DEV_URI);
+logger.LogInformation("🔑 Auth API: {BaseUrl}/{ApiVersion}/auth", serverAddresses.FirstOrDefault() ?? DEV_URI, apiVersion);
 
 // ==========================================
 // APPLICATION STARTUP
