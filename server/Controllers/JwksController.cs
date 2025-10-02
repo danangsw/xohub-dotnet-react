@@ -17,12 +17,12 @@ namespace XoHub.Server.Controllers;
 public class JwksController : ControllerBase
 {
     private readonly IKeyManager _keyManager;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheWrapper _cache;
     private readonly ILogger<JwksController> _logger;
 
     public JwksController(
         IKeyManager keyManager,
-        IDistributedCache cache,
+        ICacheWrapper cache,
         ILogger<JwksController> logger)
     {
         _keyManager = keyManager;
@@ -46,7 +46,8 @@ public class JwksController : ControllerBase
         {
             // Check cache first for performance
             var cacheKey = "jwks_response";
-            var cachedResponse = await _cache.GetStringAsync(cacheKey);
+            var cancellationToken = HttpContext?.RequestAborted ?? CancellationToken.None;
+            var cachedResponse = await _cache.GetStringAsync(cacheKey, cancellationToken);
 
             if (!string.IsNullOrEmpty(cachedResponse))
             {
@@ -68,7 +69,7 @@ public class JwksController : ControllerBase
                 WriteIndented = false // Compact JSON for production
             });
 
-            await _cache.SetStringAsync(cacheKey, jsonResponse, cacheOptions);
+            await _cache.SetStringAsync(cacheKey, jsonResponse, cancellationToken);
 
             _logger.LogInformation("Generated and cached JWKS response with {KeyCount} keys",
                 jwks.Keys?.Count ?? 0);
