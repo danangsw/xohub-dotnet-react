@@ -64,6 +64,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Distributed caching for security features (rate limiting, account lockout)
 builder.Services.AddDistributedMemoryCache(); // In production, use Redis/SQL Server
 
+// Cache wrapper for testable cache operations
+builder.Services.AddScoped<ICacheWrapper, CacheWrapper>();
+
 // HTTP Context accessor for JWT key resolution
 builder.Services.AddHttpContextAccessor();
 
