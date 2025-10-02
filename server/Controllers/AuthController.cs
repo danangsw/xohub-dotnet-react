@@ -11,7 +11,7 @@ using XoHub.Server.Services;
 namespace XoHub.Server.Controllers;
 
 [ApiController]
-[Route("{versionPrefix}/[controller]")] // Dynamic route prefix from configuration
+[Route("api/v1/[controller]")] // Explicit API versioning
 [EnableRateLimiting("AuthRateLimit")]
 [Produces("application/json")]
 public class AuthController : ApiControllerBase

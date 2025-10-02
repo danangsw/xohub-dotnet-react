@@ -90,14 +90,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             RequireSignedTokens = true
         };
 
-        // Dynamic key resolution using KeyManager
-        // Note: We'll handle key resolution in the OnTokenValidated event
-        // to avoid service locator anti-pattern during configuration
-        options.TokenValidationParameters.IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
-        {
-            // Return empty for now - validation will happen in OnTokenValidated
-            return Array.Empty<SecurityKey>();
-        };
+        // Dynamic key resolution using IKeyManager - will be configured below
 
         // SignalR-specific configuration
         options.Events = new JwtBearerEvents
@@ -252,8 +245,30 @@ var app = builder.Build();
 // CONFIGURE JWT WITH SERVICE PROVIDER
 // ==========================================
 
-// Configure JWT key resolver after app is built to avoid BuildServiceProvider warning
-ConfigureJwtKeyResolver(app);
+// Configure JWT key resolution after app is built
+var keyManager = app.Services.GetRequiredService<IKeyManager>();
+var jwtLogger = app.Services.GetRequiredService<ILogger<Program>>();
+var jwtOptions = app.Services.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>();
+
+// Get the current JWT Bearer options
+var currentOptions = jwtOptions.Get(JwtBearerDefaults.AuthenticationScheme);
+
+jwtLogger.LogInformation("Configuring JWT signing keys...");
+
+// Get keys from KeyManager and set them on the token validation parameters
+var jwks = keyManager.GetJwks();
+var signingKeys = jwks.Keys.Select(k => new RsaSecurityKey(new RSAParameters
+{
+    Modulus = Base64UrlEncoder.DecodeBytes(k.N),
+    Exponent = Base64UrlEncoder.DecodeBytes(k.E)
+})
+{ KeyId = k.Kid }).ToList<SecurityKey>();
+
+jwtLogger.LogInformation("Setting {KeyCount} signing keys: {KeyIds}",
+    signingKeys.Count, string.Join(", ", signingKeys.Select(k => k.KeyId)));
+
+// Set the signing keys directly
+currentOptions.TokenValidationParameters.IssuerSigningKeys = signingKeys;
 
 // ==========================================
 // MIDDLEWARE CONFIGURATION (ORDER MATTERS!)
@@ -279,15 +294,6 @@ app.UseStaticFiles();
 
 // Routing
 app.UseRouting();
-
-app.Use(async (context, next) =>
-{
-    var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
-    var versionPrefix = configuration["ApiSettings:VersionPrefix"] ?? API_VERSION_PREFIX;
-
-    context.Request.RouteValues["versionPrefix"] = versionPrefix;
-    await next();
-});
 
 // Authentication & Authorization
 app.UseAuthentication();
@@ -349,21 +355,3 @@ app.Run();
 // HELPER METHODS
 // ==========================================
 
-static void ConfigureJwtKeyResolver(WebApplication app)
-{
-    var jwtBearerOptions = app.Services.GetRequiredService<IOptions<JwtBearerOptions>>().Value;
-
-    jwtBearerOptions.TokenValidationParameters.IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
-    {
-        var keyManager = app.Services.GetRequiredService<IKeyManager>();
-        var jwks = keyManager.GetJwks();
-        return jwks.Keys
-            .Where(k => k.Kid == kid)
-            .Select(k => new RsaSecurityKey(new RSAParameters
-            {
-                Modulus = Base64UrlEncoder.DecodeBytes(k.N),
-                Exponent = Base64UrlEncoder.DecodeBytes(k.E)
-            })
-            { KeyId = k.Kid });
-    };
-}

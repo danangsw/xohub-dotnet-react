@@ -6,12 +6,23 @@ namespace XoHub.Server.Controllers;
 [ApiController]
 public abstract class ApiControllerBase : ControllerBase
 {
-    private readonly string API_VERSION_PREFIX = "api/v1";
     protected readonly IConfiguration _configuration;
-    protected string ApiVersionPrefix => _configuration.GetValue<string>("ApiSettings:VersionPrefix", API_VERSION_PREFIX);
 
     public ApiControllerBase(IConfiguration configuration)
     {
         _configuration = configuration;
+    }
+
+    /// <summary>
+    /// Gets the API version prefix from configuration (e.g., "api/v1").
+    /// This is used for consistent API versioning across controllers.
+    /// </summary>
+    protected string ApiVersionPrefix
+    {
+        get
+        {
+            const string DEFAULT_PREFIX = "api/v1";
+            return _configuration.GetValue<string>("ApiSettings:VersionPrefix", DEFAULT_PREFIX);
+        }
     }
 }

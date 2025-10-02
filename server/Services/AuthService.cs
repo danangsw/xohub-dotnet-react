@@ -279,9 +279,10 @@ public class AuthService : IAuthService
         // In production, this should validate against a secure database
         var users = new Dictionary<string, (string PasswordHash, string Salt, string UserId)>
         {
-            ["admin"] = (HashPassword("AdminPass123!", "default_salt"), "default_salt", "user_admin_001"),
-            ["player1"] = (HashPassword("Player123!", "player1_salt"), "player1_salt", "user_player1_002"),
-            ["player2"] = (HashPassword("Player456!", "player2_salt"), "player2_salt", "user_player2_003")
+            ["admin"] = (HashPassword("AdminPass123!", "ZGVmYXVsdF9zYWx0"), "ZGVmYXVsdF9zYWx0", "user_admin_001"),
+            ["player1"] = (HashPassword("Player123!", "cGxheWVyMV9zYWx0"), "cGxheWVyMV9zYWx0", "user_player1_002"),
+            ["player2"] = (HashPassword("Player456!", "cGxheWVyMl9zYWx0"), "cGxheWVyMl9zYWx0", "user_player2_003"),
+            ["testuser"] = (HashPassword("TestPass123!", "dGVzdF9zYWx0"), "dGVzdF9zYWx0", "user_test_004")
         };
 
         if (users.TryGetValue(userName.ToLowerInvariant(), out var userData))
@@ -303,7 +304,7 @@ public class AuthService : IAuthService
         // Use PBKDF2 for password hashing (production-ready)
         using var pbkdf2 = new Rfc2898DeriveBytes(
             password,
-            Convert.FromBase64String(salt),
+            Convert.FromBase64String(salt), // Salt is base64 encoded
             10000, // Iterations
             HashAlgorithmName.SHA256);
 

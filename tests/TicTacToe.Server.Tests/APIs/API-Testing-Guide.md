@@ -27,14 +27,17 @@ This guide explains how to perform comprehensive integration testing of the TicT
 ## Test Structure
 
 ### Health Check Tests
+
 - **Health Endpoint**: Verifies the API is running and responsive
 - Tests response time and status codes
 
 ### JWKS (JSON Web Key Set) Tests
+
 - **Public Keys Endpoint**: Tests the `/.well-known/jwks.json` endpoint
 - Validates key format and security headers
 
 ### Authentication Tests
+
 - **Login Success**: Tests successful authentication with valid credentials
 - **Login Failure**: Tests authentication with invalid credentials
 - **Rate Limiting**: Tests that rate limiting works for failed login attempts
@@ -43,6 +46,7 @@ This guide explains how to perform comprehensive integration testing of the TicT
 - **Post-Logout Access**: Tests token behavior after logout
 
 ### Security Tests
+
 - **Unauthorized Access**: Tests accessing protected endpoints without authentication
 - **Invalid Token**: Tests accessing protected endpoints with invalid JWT
 
@@ -81,6 +85,7 @@ newman run TicTacToe-API-Tests.postman_collection.json \
 ## Test Scenarios
 
 ### Happy Path Testing
+
 1. **Health Check** → Should return 200 OK
 2. **JWKS** → Should return valid key set
 3. **Login** → Should return JWT token
@@ -88,12 +93,14 @@ newman run TicTacToe-API-Tests.postman_collection.json \
 5. **Logout** → Should succeed
 
 ### Negative Testing
+
 1. **Invalid Login** → Should return 401
 2. **No Token Access** → Should return 401
 3. **Invalid Token** → Should return 401
 4. **Rate Limit** → Should return 429 after multiple failures
 
 ### Security Testing
+
 1. **Input Validation** → Test with malformed JSON, oversized payloads
 2. **Header Injection** → Test with malicious headers
 3. **SQL Injection** → Test with SQL-like input in username/password
@@ -102,20 +109,26 @@ newman run TicTacToe-API-Tests.postman_collection.json \
 ## Advanced Testing Features
 
 ### Environment Variables
+
 The collection uses variables for:
+
 - `{{baseUrl}}`: API base URL
 - `{{jwt_token}}`: Stores token from login response
 - `{{user_id}}`: Stores user ID from login response
 
 ### Test Scripts
+
 Each request includes JavaScript tests that:
+
 - Validate HTTP status codes
 - Check response structure
 - Verify security headers
 - Store tokens for subsequent requests
 
 ### Rate Limiting Tests
+
 To test rate limiting:
+
 1. Run the "Login - Invalid Credentials" request multiple times quickly
 2. Eventually it should return 429 (Too Many Requests)
 3. Check the `Retry-After` header
@@ -138,6 +151,7 @@ Postman doesn't natively support WebSocket testing. For SignalR testing, conside
 4. **Unit Tests**: Test SignalR hub methods in C# unit tests
 
 Example SignalR test script:
+
 ```javascript
 // This would require a custom test runner
 const connection = new signalR.HubConnectionBuilder()
@@ -153,26 +167,31 @@ connection.start()
 ## Best Practices
 
 ### Test Organization
+
 - Group related tests in folders
 - Use descriptive names
 - Add comments to complex tests
 
 ### Data Management
+
 - Use environment variables for dynamic data
 - Reset state between test runs
 - Avoid hardcoding sensitive data
 
 ### Error Handling
+
 - Test both success and failure scenarios
 - Validate error response formats
 - Check appropriate HTTP status codes
 
 ### Performance Testing
+
 - Use Postman's Runner for load testing
 - Monitor response times
 - Set up alerts for slow responses
 
 ### CI/CD Integration
+
 - Export collections as JSON files
 - Use Newman for automated testing
 - Integrate with build pipelines
