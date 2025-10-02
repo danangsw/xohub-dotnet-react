@@ -28,7 +28,7 @@ public class AuthController : ApiControllerBase
         IKeyManager keyManager,
         IAuthService authService,
         ILogger<AuthController> logger,
-        IConfiguration configuration) : base(configuration)
+        IConfiguration configuration) : base(logger, configuration)
     {
         _keyManager = keyManager ?? throw new ArgumentNullException(nameof(keyManager));
         _authService = authService ?? throw new ArgumentNullException(nameof(authService));
@@ -281,57 +281,6 @@ public class AuthController : ApiControllerBase
         // Require at least one uppercase, one lowercase, one digit, one special character
         return Regex.IsMatch(password,
             @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$");
-    }
-
-    private IActionResult CreateProblemDetails(string title, string detail, int statusCode, string requestId, List<string>? errors = null)
-    {
-        var problemDetails = new ProblemDetails
-        {
-            Title = title,
-            Detail = detail,
-            Status = statusCode,
-            Instance = Request.Path,
-            Extensions = { ["requestId"] = requestId }
-        };
-
-        if (errors != null && errors.Any())
-        {
-            problemDetails.Extensions["errors"] = errors;
-        }
-
-        // Add security headers
-        Response.Headers["X-Request-ID"] = requestId;
-        Response.Headers["X-Content-Type-Options"] = "nosniff";
-        Response.Headers["X-Frame-Options"] = "DENY";
-        Response.Headers["X-XSS-Protection"] = "1; mode=block";
-
-        return StatusCode(statusCode, problemDetails);
-    }
-
-    private string GetClientIP()
-    {
-        // Get real client IP, considering proxy headers
-        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-
-        // Check for forwarded headers (use with caution in production)
-        var forwardedFor = HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwardedFor))
-        {
-            ip = forwardedFor.Split(',').First().Trim();
-        }
-
-        var forwarded = HttpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrEmpty(forwarded))
-        {
-            ip = forwarded;
-        }
-
-        return ip ?? "unknown";
-    }
-
-    private string GetUserAgent()
-    {
-        return HttpContext.Request.Headers["User-Agent"].FirstOrDefault() ?? "unknown";
     }
 
     #endregion
