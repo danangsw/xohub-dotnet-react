@@ -59,6 +59,7 @@ builder.Services.AddSingleton<IRoomManager, RoomManager>();
 builder.Services.AddSingleton<IAIEngine, AIEngine>();
 
 // Authentication & security services
+builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Distributed caching for security features (rate limiting, account lockout)

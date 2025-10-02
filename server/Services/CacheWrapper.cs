@@ -10,8 +10,10 @@ namespace XoHub.Server.Services;
 /// </summary>
 public interface ICacheWrapper
 {
-    Task<string?> GetStringAsync(string key, CancellationToken token);
-    Task SetStringAsync(string key, string value, CancellationToken token);
+    Task<string?> GetStringAsync(string key, CancellationToken token = default);
+    Task SetStringAsync(string key, string value, CancellationToken token = default);
+    Task SetStringAsync(string key, string value, DistributedCacheEntryOptions options, CancellationToken token = default);
+    Task RemoveAsync(string key, CancellationToken token = default);
 }
 
 /// <summary>
@@ -26,13 +28,23 @@ public class CacheWrapper : ICacheWrapper
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
-    public Task<string?> GetStringAsync(string key, CancellationToken token)
+    public Task<string?> GetStringAsync(string key, CancellationToken token = default)
     {
         return _cache.GetStringAsync(key, token);
     }
 
-    public Task SetStringAsync(string key, string value, CancellationToken token)
+    public Task SetStringAsync(string key, string value, CancellationToken token = default)
     {
         return _cache.SetStringAsync(key, value, token);
+    }
+
+    public Task SetStringAsync(string key, string value, DistributedCacheEntryOptions options, CancellationToken token = default)
+    {
+        return _cache.SetStringAsync(key, value, options, token);
+    }
+
+    public Task RemoveAsync(string key, CancellationToken token = default)
+    {
+        return _cache.RemoveAsync(key, token);
     }
 }

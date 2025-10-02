@@ -18,8 +18,8 @@ public interface IAuthService
 public class AuthService : IAuthService
 {
     private readonly ILogger<AuthService> _logger;
-    private readonly IDistributedCache _cache;
-    private readonly IConfiguration _configuration;
+    private readonly ICacheWrapper _cache;
+    private readonly IConfigurationService _configurationService;
 
     // Security configuration
     private readonly int _maxFailedLoginAttempts;
@@ -30,19 +30,19 @@ public class AuthService : IAuthService
 
     public AuthService(
         ILogger<AuthService> logger,
-        IDistributedCache cache,
-        IConfiguration configuration)
+        ICacheWrapper cache,
+        IConfigurationService configurationService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
 
         // Load security configuration with secure defaults
-        _maxFailedLoginAttempts = _configuration.GetValue<int>("Security:MaxFailedLoginAttempts", 5);
-        _accountLockoutDuration = TimeSpan.FromMinutes(_configuration.GetValue<int>("Security:AccountLockoutMinutes", 15));
-        _rateLimitMaxRequests = _configuration.GetValue<int>("Security:RateLimitMaxRequests", 10);
-        _rateLimitWindow = TimeSpan.FromMinutes(_configuration.GetValue<int>("Security:RateLimitWindowMinutes", 15));
-        _failedLoginTrackingWindow = TimeSpan.FromHours(_configuration.GetValue<int>("Security:FailedLoginTrackingHours", 24));
+        _maxFailedLoginAttempts = _configurationService.GetMaxFailedLoginAttempts();
+        _accountLockoutDuration = TimeSpan.FromMinutes(_configurationService.GetAccountLockoutMinutes());
+        _rateLimitMaxRequests = _configurationService.GetRateLimitMaxRequests();
+        _rateLimitWindow = TimeSpan.FromMinutes(_configurationService.GetRateLimitWindowMinutes());
+        _failedLoginTrackingWindow = TimeSpan.FromHours(_configurationService.GetFailedLoginTrackingHours());
     }
 
     public async Task<(bool Success, string? UserId, string? ErrorMessage)> AuthenticateUserAsync(string userName, string password)
