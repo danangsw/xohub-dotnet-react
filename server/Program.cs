@@ -359,3 +359,8 @@ app.Run();
 // HELPER METHODS
 // ==========================================
 
+public partial class Program
+{
+    // Expose Program class for integration testing
+}
+
