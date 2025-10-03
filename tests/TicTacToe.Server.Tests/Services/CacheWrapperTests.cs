@@ -386,6 +386,18 @@ public class CacheWrapperTests
     }
 
     [Fact]
+    public async Task SetStringAsync_WithNullKey_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var value = "opt-value";
+        var token = CancellationToken.None;
+        var options = new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(5) };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => _cacheWrapper.SetStringAsync(null!, value, options, token));
+    }
+
+    [Fact]
     public async Task RemoveAsync_WithNullKey_ThrowsArgumentNullException()
     {
         // Arrange
