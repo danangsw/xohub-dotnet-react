@@ -40,11 +40,19 @@ public class CacheWrapper : ICacheWrapper
 
     public Task SetStringAsync(string key, string value, DistributedCacheEntryOptions options, CancellationToken token = default)
     {
+        if (key is null)
+            throw new ArgumentNullException(nameof(key));
+        if (options is null)
+            throw new ArgumentNullException(nameof(options));
+
         return _cache.SetStringAsync(key, value, options, token);
     }
 
     public Task RemoveAsync(string key, CancellationToken token = default)
     {
+        if (key is null)
+            throw new ArgumentNullException(nameof(key));
+
         return _cache.RemoveAsync(key, token);
     }
 }

@@ -352,6 +352,66 @@ public class CacheWrapperTests
         _distributedCacheMock.Verify(x => x.SetAsync(key, expectedBytes, It.IsAny<DistributedCacheEntryOptions>(), token), Times.Once);
     }
 
+    [Fact]
+    public async Task SetStringAsync_WithOptions_CallsDistributedCache()
+    {
+        // Arrange
+        var key = "opt-key";
+        var value = "opt-value";
+        var token = CancellationToken.None;
+        var options = new DistributedCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(10) };
+        var expectedBytes = Encoding.UTF8.GetBytes(value);
+
+        _distributedCacheMock.Setup(x => x.SetAsync(key, expectedBytes, options, token))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _cacheWrapper.SetStringAsync(key, value, options, token);
+
+        // Assert
+        _distributedCacheMock.Verify(x => x.SetAsync(key, expectedBytes, options, token), Times.Once);
+    }
+
+    [Fact]
+    public async Task SetStringAsync_WithNullOptions_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var key = "opt-key";
+        var value = "opt-value";
+        var token = CancellationToken.None;
+
+        // Act & Assert - pass a null options using null-forgiving to satisfy non-nullable signature
+        Task CallWithNullOptions() => _cacheWrapper.SetStringAsync(key, value, (DistributedCacheEntryOptions?)null!, token);
+        await Assert.ThrowsAsync<ArgumentNullException>(() => CallWithNullOptions());
+    }
+
+    [Fact]
+    public async Task RemoveAsync_WithNullKey_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var token = CancellationToken.None;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(() => _cacheWrapper.RemoveAsync(null!, token));
+    }
+
+    [Fact]
+    public async Task RemoveAsync_WithValidKey_CallsDistributedCache()
+    {
+        // Arrange
+        var key = "remove-key";
+        var token = CancellationToken.None;
+
+        _distributedCacheMock.Setup(x => x.RemoveAsync(key, token))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _cacheWrapper.RemoveAsync(key, token);
+
+        // Assert
+        _distributedCacheMock.Verify(x => x.RemoveAsync(key, token), Times.Once);
+    }
+
     #endregion
 
     #region Integration-Style Tests
